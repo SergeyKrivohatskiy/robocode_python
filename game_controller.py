@@ -18,7 +18,7 @@ class GameController(cocos.scene.Scene):
             raise NoRobotsException()
         self.time = 0
         self.bullets = []
-        self.robots = map(lambda robot_class: robot_class(self, (0, 0)), robots_list)
+        self.robots = map(lambda robot_class: robot_class(self, (200, 200)), robots_list)
         for robot in self.robots:
             self.add(robot)
         for bullet in self.bullets:
@@ -27,11 +27,7 @@ class GameController(cocos.scene.Scene):
 
     def update(self, dt):
         # dt is ignored for a while
-        commands = self.get_robots_commands()
-        self.time += 1
-        bullet_events = self.move_bullets(commands)
-        robot_move_events = self.move_robots(commands)
-        self.process_events(bullet_events, robot_move_events)
+        self.time += dt
 
     def get_robots_commands(self):
         all_commands = [(robot, robot.get_next_command()) for robot in self.robots]

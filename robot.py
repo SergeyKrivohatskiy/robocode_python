@@ -1,20 +1,20 @@
 #!/usr/bin/env python
 __author__ = 'Sergey Krivohatskiy'
-import cocos
 import threading
 import robot_commands
+import pyglet
+from game_object import GameObject
 
 
-class Robot(cocos.text.Label):
+class Robot(GameObject):
     def __init__(self, game_controller, position):
-        self.position = position
+        super(Robot, self).__init__(pyglet.resource.image('robot.png'), position)
         self.controller = game_controller
         self.new_command_event = threading.Event()
         self.get_command_event = threading.Event()
         self.command = None
         self.run_thread = threading.Thread(target=self.run)
         self.run_thread.start()
-        super(Robot, self).__init__("R", self.position)
 
     def get_next_command(self):
         if self.command is None:
