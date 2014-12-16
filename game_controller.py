@@ -3,6 +3,7 @@ __author__ = 'Sergey Krivohatskiy'
 from robot import Robot
 import cocos
 import robot_commands
+import time
 
 
 class NoRobotsException(BaseException):
@@ -10,6 +11,7 @@ class NoRobotsException(BaseException):
 
 
 class GameController(cocos.scene.Scene):
+    tic_time = 0.1
     # robots_list is a list of Robot class subclasses
     def __init__(self, robots_list):
         super(GameController, self).__init__()
@@ -20,18 +22,24 @@ class GameController(cocos.scene.Scene):
         self.bullets = []
         self.robots = map(lambda robot_class: robot_class(self, (200, 200)), robots_list)
         for robot in self.robots:
-            robot.vel = 100
+            robot.vel = 1
             self.add(robot)
         for bullet in self.bullets:
             self.add(bullet)
-        self.schedule(self.update)
+        self.do(cocos.actions.Repeat(self.update))
 
-    def update(self, dt):
+
+    @cocos.actions.CallFuncS
+    def update(self):
         # dt is ignored for a while
-        self.time += dt
+        start = time.time()
+
+        self.time += 1
         for robot in self.robots:
-            robot.rotation += 5
-            robot.update(dt)
+            robot.rotation += 1
+            robot.update()
+
+        time.sleep(GameController.tic_time + start - time.time())
 
     def get_robots_commands(self):
         all_commands = [(robot, robot.get_next_command()) for robot in self.robots]

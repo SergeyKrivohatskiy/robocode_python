@@ -9,6 +9,7 @@ from game_object import GameObject
 class Robot(GameObject):
     def __init__(self, game_controller, position):
         super(Robot, self).__init__(pyglet.resource.image('robot.png'), position)
+        self.max_speed = 8
         self.controller = game_controller
         self.new_command_event = threading.Event()
         self.get_command_event = threading.Event()
