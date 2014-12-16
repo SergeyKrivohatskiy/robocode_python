@@ -20,6 +20,7 @@ class GameController(cocos.scene.Scene):
         self.bullets = []
         self.robots = map(lambda robot_class: robot_class(self, (200, 200)), robots_list)
         for robot in self.robots:
+            robot.vel = 100
             self.add(robot)
         for bullet in self.bullets:
             self.add(bullet)
@@ -28,6 +29,9 @@ class GameController(cocos.scene.Scene):
     def update(self, dt):
         # dt is ignored for a while
         self.time += dt
+        for robot in self.robots:
+            robot.rotation += 5
+            robot.update(dt)
 
     def get_robots_commands(self):
         all_commands = [(robot, robot.get_next_command()) for robot in self.robots]
