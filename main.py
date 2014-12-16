@@ -3,6 +3,7 @@ __author__ = 'Sergey Krivohatskiy'
 import game_controller
 import traceback
 import example_robot
+import cocos
 
 
 def load_robots():
@@ -16,8 +17,9 @@ def load_robots():
 def main():
     try:
         robots_list = load_robots()
-        controller = game_controller.GameController(robots_list)
-        controller.run()
+        cocos.director.director.init()
+        game_scene = game_controller.GameController(robots_list)
+        cocos.director.director.run(game_scene)
     except game_controller.NoRobotsException as e:
         print('There is no robots in robots_list ')
         return -1
