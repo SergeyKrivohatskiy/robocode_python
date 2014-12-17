@@ -11,9 +11,11 @@ class GameObject(cocos.sprite.Sprite):
         self.vel = 0
         self.speed = 0
         self.rotation = 0
+        self.rot_speed = 0
 
     def update(self):
         x, y = self.position[0], self.position[1]
+        self.rotation += self.rot_speed
         a = math.radians(self.rotation)
         sin, cos = math.sin(a), math.cos(a)
 
@@ -22,4 +24,16 @@ class GameObject(cocos.sprite.Sprite):
             self.speed = math.copysign(self.max_speed, self.speed)
 
         dx, dy = (cos * self.speed), (-sin * self.speed)
-        self.position = (x + dx, y + dy)
+        x += dx
+        y += dy
+        # simple cutting if out of the border
+        if y < 0:
+            y = 0
+        if x < 0:
+            x = 0
+        w, h = cocos.director.director.get_window_size()
+        if y > h:
+            y = h
+        if x > w:
+            x = w
+        self.position = (x, y)

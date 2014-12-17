@@ -6,7 +6,10 @@ from robot import Robot
 class ExampleRobot(Robot):
     def run(self):
         while True:
-            self.ahead(100)
-            self.turn_gun_right(360)
-            self.back(100)
-            self.turn_gun_right(360)
+            self.set_rot_speed(8)
+            self.set_vel(1)
+            for i in range(0, 50):
+                self.do_nothing()
+            self.set_vel(-1)
+            for i in range(0, 50):
+                self.do_nothing()

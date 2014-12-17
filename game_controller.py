@@ -22,7 +22,6 @@ class GameController(cocos.scene.Scene):
         self.bullets = []
         self.robots = map(lambda robot_class: robot_class(self, (200, 200)), robots_list)
         for robot in self.robots:
-            robot.vel = 1
             self.add(robot)
         for bullet in self.bullets:
             self.add(bullet)
@@ -36,14 +35,12 @@ class GameController(cocos.scene.Scene):
 
         self.time += 1
         for robot in self.robots:
-            robot.rotation += 1
             robot.update()
 
-        time.sleep(GameController.tic_time + start - time.time())
+        for robot in self.robots:
+            robot.exec_next_command()
 
-    def get_robots_commands(self):
-        all_commands = [(robot, robot.get_next_command()) for robot in self.robots]
-        return all_commands
+        time.sleep(GameController.tic_time + start - time.time())
 
     def move_bullets(self, commands):
         fire_commands = filter(lambda t: isinstance(t[1], robot_commands.Fire), commands)
@@ -59,8 +56,6 @@ class GameController(cocos.scene.Scene):
         events = []
         turn_commands = filter(lambda t: isinstance(t[1], robot_commands.Turn), commands)
         move_commands = filter(lambda t: isinstance(t[1], robot_commands.Move), commands)
-        for t in move_commands:
-            t[0].position = (t[0].position[0] + t[1].distance, t[0].position[1])
         return events
 
     def process_events(self, bullet_events, robot_move_events):

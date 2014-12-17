@@ -17,15 +17,10 @@ class Robot(GameObject):
         self.run_thread = threading.Thread(target=self.run)
         self.run_thread.start()
 
-    def get_next_command(self):
-        if self.command is None:
-            self.get_command_event.set()
+    def exec_next_command(self):
         self.new_command_event.wait()
         self.new_command_event.clear()
-        command = self.command
-        self.command = None
-        assert command is not None
-        return command
+        self.get_command_event.set()
 
     def get_x(self):
         return self.position[0]
@@ -44,12 +39,12 @@ class Robot(GameObject):
         self.command = robot_commands.Fire()
         self.on_command()
 
-    def ahead(self, distance):
-        self.command = robot_commands.Move(distance)
+    def set_vel(self, vel):
+        self.vel = vel
         self.on_command()
 
-    def back(self, distance):
-        self.command = robot_commands.Move(-distance)
+    def set_rot_speed(self, speed):
+        self.rot_speed = speed
         self.on_command()
 
     def on_command(self):
@@ -58,7 +53,6 @@ class Robot(GameObject):
         self.get_command_event.clear()
 
     def do_nothing(self):
-        self.command = robot_commands.DoNothing()
         self.on_command()
 
     def get_battle_field_width(self):
