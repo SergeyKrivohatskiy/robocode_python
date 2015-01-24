@@ -20,3 +20,4 @@ class Robot(cocos.sprite.Sprite):
         self.acceleration = eu.Vector2(0, 0)
         self.gun = Gun()
         self.add(self.gun)
+        self.rotation = 0

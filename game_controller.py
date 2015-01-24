@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 __author__ = 'Sergey Krivohatskiy'
-from robot import Robot
 import cocos
 import time
 import cocos.euclid as eu
-import cocos.collision_model as cm
 from constants import consts
 import random
 
@@ -26,16 +24,31 @@ class GameController(cocos.layer.Layer):
         self.time = 0
         self.do(cocos.actions.Repeat(self.update))
 
-
     @cocos.actions.CallFuncS
     def update(self):
         start = time.time()
 
+        self.prepare_commands()
         self.time += 1
-
-
-        # TODO
-        print(self.time)
+        self.process_bullets()
+        self.process_robots()
+        self.make_scan()
+        self.process_events()
 
         to_sleep = GameController.tic_time + start - time.time()
         time.sleep(to_sleep if to_sleep > 0 else 0)
+
+    def prepare_commands(self):
+        pass
+
+    def process_bullets(self):
+        pass
+
+    def process_robots(self):
+        pass
+
+    def make_scan(self):
+        pass
+
+    def process_events(self):
+        pass

@@ -13,3 +13,4 @@ class Gun(cocos.sprite.Sprite):
         self.heat = self.robot_consts["initial_gun_heat"]
         self.radar = Radar()
         self.add(self.radar)
+        self.rotation = 0
