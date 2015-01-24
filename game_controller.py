@@ -20,6 +20,50 @@ def deg_to_vector(rotation):
     return eu.Vector2(math.cos(radians_rotation), -math.sin(radians_rotation))
 
 
+def check_edge(p1, p2, segment_beg, segment_end, u1u2):
+    new_intersection = get_segments_intersection(segment_beg, segment_end, p1, p2)
+    if u1u2 is None or (new_intersection is not None and new_intersection(0) < u1u2(0)):
+        u1u2 = new_intersection
+    return u1u2
+
+
+def get_segment_square_intersection(segment_beg, segment_end, square_center,
+                                    half_width):
+    # square points
+    p1 = (square_center[0] - half_width, square_center[1] - half_width)
+    p2 = (square_center[0] - half_width, square_center[1] + half_width)
+    p3 = (square_center[0] + half_width, square_center[1] + half_width)
+    p4 = (square_center[0] + half_width, square_center[1] - half_width)
+
+    u1u2 = None
+    u1u2 = check_edge(p1, p2, segment_beg, segment_end, u1u2)
+    u1u2 = check_edge(p2, p3, segment_beg, segment_end, u1u2)
+    u1u2 = check_edge(p3, p4, segment_beg, segment_end, u1u2)
+    u1u2 = check_edge(p4, p1, segment_beg, segment_end, u1u2)
+    return u1u2(0) if u1u2 is not None else None
+
+
+def get_segments_intersection(segment1_beg, segment1_end, segment2_beg, segment2_end):
+    divisor = (segment2_end[1] - segment2_beg[1]) * (segment1_end[0] - segment1_beg[0]) - \
+              (segment2_end[0] - segment2_beg[0]) * (segment1_end[1] - segment1_beg[1])
+    if divisor == 0:
+        # parallel segments
+        return None
+    u1 = (segment2_end[0] - segment2_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
+         (segment2_end[1] - segment2_beg[1]) * (segment1_beg[0] - segment2_beg[0])
+    u1 /= divisor
+    if u1 > 1 or u1 < 0:
+        # intersection is out of segment 1
+        return None
+    u2 = (segment1_end[0] - segment1_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
+         (segment1_end[1] - segment1_beg[1]) * (segment1_beg[0] - segment2_beg[0])
+    u2 /= divisor
+    if u2 > 1 or u2 < 0:
+        # intersection is out of segment 2
+        return None
+    return u1, u2
+
+
 class GameController(cocos.layer.Layer):
     tic_time = 0.1
     # robots_list is a list of Robot class subclasses
@@ -54,6 +98,27 @@ class GameController(cocos.layer.Layer):
             robot.prepare_command()
             assert robot.has_command()
 
+    def check_bullets_intersection(self, bullet_old_pos_new_pos):
+        removed = [False for _ in bullet_old_pos_new_pos]
+        for i in range(0, len(bullet_old_pos_new_pos)):
+            bullet_step1 = bullet_old_pos_new_pos[i]
+            for j in range(i + 1, len(bullet_old_pos_new_pos)):
+                bullet_step2 = bullet_old_pos_new_pos[j]
+                u1u2 = get_segments_intersection(bullet_step1[1], bullet_step1[2], bullet_step2[1], bullet_step2[2])
+                if u1u2 is not None:
+                    removed[i] = removed[j] = True
+        new_bullet_old_pos_new_pos = []
+        for i in range(0, len(bullet_old_pos_new_pos)):
+            if removed[i]:
+                    self.bullets.remove(bullet_old_pos_new_pos[i][0])
+                    self.remove(bullet_old_pos_new_pos[i][0])
+            else:
+                new_bullet_old_pos_new_pos.append(bullet_old_pos_new_pos[i])
+        return new_bullet_old_pos_new_pos
+
+    def check_bullets_robots_intersection(self, bullet_old_pos_new_pos):
+        return bullet_old_pos_new_pos
+
     def process_bullets(self):
         for robot in self.robots:
             if not robot.has_command():
@@ -66,14 +131,13 @@ class GameController(cocos.layer.Layer):
             self.add(new_bullet, z=2)
             self.bullets.append(new_bullet)
 
-        for bullet in self.bullets:
-            old_pos = bullet.position
-            bullet.position += bullet.velocity * deg_to_vector(bullet.rotation)
-            # TODO collisions
-            if self.check_if_square_is_out_of_window(bullet.position, consts["bullet"]["half_width"]):
-                self.bullets.remove(bullet)
-                self.remove(bullet)
-            pass
+        bullet_old_pos_new_pos = [
+            (bullet, bullet.position, bullet.position + bullet.velocity * deg_to_vector(bullet.rotation)) for bullet in
+            self.bullets]
+        bullet_old_pos_new_pos = self.check_bullets_intersection(bullet_old_pos_new_pos)
+        bullet_old_pos_new_pos = self.check_bullets_robots_intersection(bullet_old_pos_new_pos)
+        for bullet, _, new_pos in bullet_old_pos_new_pos:
+            bullet.position = new_pos
 
     def process_turn_command(self, command, robot):
         if isinstance(command, TurnGun):
@@ -135,4 +199,4 @@ class GameController(cocos.layer.Layer):
         window_width = consts["window"]["width"]
         window_height = consts["window"]["height"]
         return (window_width - half_width <= point[0]) or (half_width >= point[0]) or \
-                (window_height - half_width <= point[1]) or (half_width >= point[1])
+               (window_height - half_width <= point[1]) or (half_width >= point[1])
