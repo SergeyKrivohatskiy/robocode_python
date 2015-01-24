@@ -11,4 +11,7 @@ class ExampleRobot(Robot):
             self.turn_gun_right(90)
             self.turn_gun_left(180)
             self.turn_left(90)
+            self.ahead(100)
+            self.turn_right(90)
+            self.back(100)
             self.turn_radar_right(360)

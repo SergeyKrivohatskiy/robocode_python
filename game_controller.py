@@ -63,7 +63,8 @@ class GameController(cocos.layer.Layer):
             # TODO process bullets
             pass
 
-    def get_rotation_deg(self, command, max_turn, robot):
+    @staticmethod
+    def get_rotation_deg(command, max_turn, robot):
         deg = command.deg
         if abs(deg) > max_turn:
             deg = math.copysign(max_turn, deg)
@@ -72,6 +73,22 @@ class GameController(cocos.layer.Layer):
             robot.push_command(command)
         return deg
 
+    def process_turn_command(self, command, robot):
+        if isinstance(command, TurnGun):
+            deg = self.get_rotation_deg(command, consts["robot"]["max_gun_turn"], robot)
+            robot.gun.rotation = (deg + robot.gun.rotation) % 360
+            return
+        if isinstance(command, TurnBody):
+            max_turn = consts["robot"]["max_idle_body_turn"] - consts["robot"]["velocity_body_turn_coefficient"] * \
+                                                               abs(robot.velocity)
+            deg = self.get_rotation_deg(command, max_turn if max_turn > 0 else 0, robot)
+            robot.rotation = (deg + robot.rotation) % 360
+            return
+        if isinstance(command, TurnRadar):
+            deg = self.get_rotation_deg(command, consts["robot"]["max_radar_turn"], robot)
+            robot.gun.radar.rotation = (deg + robot.gun.radar.rotation) % 360
+            return
+
     def process_robots(self):
         for robot in self.robots:
             if not robot.has_command():
@@ -79,19 +96,19 @@ class GameController(cocos.layer.Layer):
             command = robot.pop_command()
             if isinstance(command, DoNothing):
                 continue
-            if isinstance(command, TurnGun):
-                deg = self.get_rotation_deg(command, consts["robot"]["max_gun_turn"], robot)
-                robot.gun.rotation = (deg + robot.gun.rotation) % 360
+            if isinstance(command, Turn):
+                self.process_turn_command(command, robot)
                 continue
-            if isinstance(command, TurnBody):
-                max_turn = consts["robot"]["max_idle_body_turn"] - consts["robot"]["velocity_body_turn_coefficient"] *\
-                                                                   abs(robot.velocity)
-                deg = self.get_rotation_deg(command, max_turn if max_turn > 0 else 0, robot)
-                robot.rotation = (deg + robot.rotation) % 360
-                continue
-            if isinstance(command, TurnRadar):
-                deg = self.get_rotation_deg(command, consts["robot"]["max_radar_turn"], robot)
-                robot.gun.radar.rotation = (deg + robot.gun.radar.rotation) % 360
+            if isinstance(command, Move):
+                max_vel = consts["robot"]["max_velocity"]
+                distance = command.distance
+                if abs(distance) > max_vel:
+                    distance = math.copysign(max_vel, distance)
+                command.distance -= distance
+                if command.distance != 0:
+                    robot.push_command(command)
+                radians_rotation = math.radians(robot.rotation)
+                robot.position += distance * eu.Vector2(math.cos(radians_rotation), -math.sin(radians_rotation))
                 continue
             # TODO process other commands
             robot.push_command(command)

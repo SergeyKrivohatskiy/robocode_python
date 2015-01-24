@@ -27,6 +27,7 @@ consts = {
         "max_gun_turn": 20,
         "max_radar_turn": 45,
         "max_idle_body_turn": 10,
-        "velocity_body_turn_coefficient": 0.75
+        "velocity_body_turn_coefficient": 0.75,
+        "max_velocity": 8
     }
 }

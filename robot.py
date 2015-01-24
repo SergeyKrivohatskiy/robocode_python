@@ -22,15 +22,26 @@ class Turn(object):
 
 
 class TurnGun(Turn):
-    pass
+    def __repr__(self):
+        return 'Turn gun %d deg' % self.deg
 
 
 class TurnBody(Turn):
-    pass
+    def __repr__(self):
+        return 'Turn body %d deg' % self.deg
 
 
 class TurnRadar(Turn):
-    pass
+    def __repr__(self):
+        return 'Turn radar %d deg' % self.deg
+
+
+class Move(object):
+    def __init__(self, distance):
+        self.distance = distance
+
+    def __repr__(self):
+        return 'Move %d distance' % self.distance
 
 
 class Robot(cocos.sprite.Sprite):
@@ -116,6 +127,14 @@ class Robot(cocos.sprite.Sprite):
 
     def turn_left(self, deg):
         self.push_command(TurnBody(-deg))
+        self.on_command()
+
+    def ahead(self, distance):
+        self.push_command(Move(distance))
+        self.on_command()
+
+    def back(self, distance):
+        self.push_command(Move(-distance))
         self.on_command()
 
     def get_heading(self):
