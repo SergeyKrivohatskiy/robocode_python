@@ -145,6 +145,8 @@ class GameController(cocos.layer.Layer):
 
     def process_bullets(self):
         for robot in self.robots:
+            if robot.gun.heat > 0:
+                robot.gun.heat = max(0, robot.gun.heat - consts["robot"]["gun_cooling"])
             if not robot.has_command():
                 continue
             command = robot.pop_command()

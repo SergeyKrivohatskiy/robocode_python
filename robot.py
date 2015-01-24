@@ -140,6 +140,9 @@ class Robot(cocos.sprite.Sprite):
         self.on_command()
 
     def fire(self, power):
+        if self.gun.heat != 0:
+            return
+        self.gun.heat += (1 + power / 5)
         self.push_command(Fire(power))
         self.on_command()
 

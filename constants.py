@@ -30,7 +30,8 @@ consts = {
         "velocity_body_turn_coefficient": 0.75,
         "max_velocity": 8,
         "initial_energy": 100,
-        "half_width": 50
+        "half_width": 50,
+        "gun_cooling": 0.1
     },
     "bullet": {
         "image": 'bullet.png',
