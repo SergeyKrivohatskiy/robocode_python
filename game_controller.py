@@ -110,7 +110,7 @@ class GameController(cocos.layer.Layer):
                 radians_rotation = math.radians(robot.rotation)
                 robot.position += distance * eu.Vector2(math.cos(radians_rotation), -math.sin(radians_rotation))
                 continue
-            # TODO process other commands
+            # push command back if do not know how to process it
             robot.push_command(command)
 
     def make_scan(self):
