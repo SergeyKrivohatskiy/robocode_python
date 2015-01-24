@@ -13,7 +13,7 @@ def get_rand_position(w, h):
 
 
 class GameController(cocos.layer.Layer):
-    tic_time = 0.5
+    tic_time = 0.1
     # robots_list is a list of Robot class subclasses
     def __init__(self, robots_list):
         super(GameController, self).__init__()
@@ -64,6 +64,15 @@ class GameController(cocos.layer.Layer):
                 continue
             command = robot.pop_command()
             if isinstance(command, DoNothing):
+                continue
+            if isinstance(command, TurnGun):
+                robot.gun.rotation += command.deg
+                continue
+            if isinstance(command, TurnBody):
+                robot.rotation += command.deg
+                continue
+            if isinstance(command, TurnRadar):
+                robot.gun.radar.rotation += command.deg
                 continue
             # TODO process other commands
             robot.push_command(command)

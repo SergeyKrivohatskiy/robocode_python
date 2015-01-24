@@ -5,7 +5,6 @@ import pyglet
 import cocos
 from constants import consts
 import cocos.euclid as eu
-import cocos.collision_model as cm
 from gun import Gun
 
 
@@ -15,6 +14,21 @@ class DoNothing(object):
 
 class Fire(object):
     pass
+
+
+class TurnGun(object):
+    def __init__(self, deg):
+        self.deg = deg
+
+
+class TurnBody(object):
+    def __init__(self, deg):
+        self.deg = deg
+
+
+class TurnRadar(object):
+    def __init__(self, deg):
+        self.deg = deg
 
 
 class Robot(cocos.sprite.Sprite):
@@ -68,4 +82,36 @@ class Robot(cocos.sprite.Sprite):
 
     def do_nothing(self):
         self.push_command(DoNothing())
+        self.on_command()
+
+    def turn_gun_right(self, deg):
+        self.push_command(TurnGun(deg))
+        self.on_command()
+
+    def turn_gun_left(self, deg):
+        self.push_command(TurnGun(-deg))
+        self.on_command()
+
+    def turn_radar_right(self, deg):
+        self.push_command(TurnRadar(deg))
+        self.on_command()
+
+    def turn_radar_left(self, deg):
+        self.push_command(TurnRadar(-deg))
+        self.on_command()
+
+    def turn_right(self, deg):
+        self.push_command(TurnBody(deg))
+        self.on_command()
+
+    def turn_left(self, deg):
+        self.push_command(TurnBody(-deg))
+        self.on_command()
+
+    def turn_right(self, deg):
+        self.push_command(TurnBody(deg))
+        self.on_command()
+
+    def turn_left(self, deg):
+        self.push_command(TurnBody(-deg))
         self.on_command()
