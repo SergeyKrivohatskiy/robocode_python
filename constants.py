@@ -23,6 +23,10 @@ consts = {
             "gun": 'gun.png',
             "radar": 'radar.png'
         },
-        "initial_gun_heat": 3
+        "initial_gun_heat": 3,
+        "max_gun_turn": 20,
+        "max_radar_turn": 45,
+        "max_idle_body_turn": 10,
+        "velocity_body_turn_coefficient": 0.75
     }
 }

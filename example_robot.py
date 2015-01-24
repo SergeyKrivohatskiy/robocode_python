@@ -8,7 +8,7 @@ class ExampleRobot(Robot):
         while True:
             print("ExampleRobotRun")
             self.do_nothing()
-            self.turn_gun_right(9)
-            self.turn_gun_left(10)
-            self.turn_left(10)
-            self.turn_radar_right(10)
+            self.turn_gun_right(90)
+            self.turn_gun_left(180)
+            self.turn_left(90)
+            self.turn_radar_right(360)
