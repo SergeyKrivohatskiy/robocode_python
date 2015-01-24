@@ -3,15 +3,21 @@ import math
 
 __author__ = 'Sergey Krivohatskiy'
 import cocos
+from constants import consts
 import time
 import cocos.euclid as eu
-from constants import consts
 import random
 from robot import *
+from bullet import *
 
 
 def get_rand_position(w, h):
     return eu.Vector2(random.randrange(w), random.randrange(h))
+
+
+def deg_to_vector(rotation):
+    radians_rotation = math.radians(rotation)
+    return eu.Vector2(math.cos(radians_rotation), -math.sin(radians_rotation))
 
 
 class GameController(cocos.layer.Layer):
@@ -56,22 +62,18 @@ class GameController(cocos.layer.Layer):
             if not isinstance(command, Fire):
                 robot.push_command(command)
                 continue
-            fire = command
-            # TODO execute fire command
+            new_bullet = Bullet(robot.position, command.power, robot.get_gun_heading(), robot)
+            self.add(new_bullet, z=2)
+            self.bullets.append(new_bullet)
 
         for bullet in self.bullets:
-            # TODO process bullets
+            old_pos = bullet.position
+            bullet.position += bullet.velocity * deg_to_vector(bullet.rotation)
+            # TODO collisions
+            if self.check_if_square_is_out_of_window(bullet.position, consts["bullet"]["half_width"]):
+                self.bullets.remove(bullet)
+                self.remove(bullet)
             pass
-
-    @staticmethod
-    def get_rotation_deg(command, max_turn, robot):
-        deg = command.deg
-        if abs(deg) > max_turn:
-            deg = math.copysign(max_turn, deg)
-        command.deg -= deg
-        if command.deg != 0:
-            robot.push_command(command)
-        return deg
 
     def process_turn_command(self, command, robot):
         if isinstance(command, TurnGun):
@@ -107,8 +109,7 @@ class GameController(cocos.layer.Layer):
                 command.distance -= distance
                 if command.distance != 0:
                     robot.push_command(command)
-                radians_rotation = math.radians(robot.rotation)
-                robot.position += distance * eu.Vector2(math.cos(radians_rotation), -math.sin(radians_rotation))
+                robot.position += distance * deg_to_vector(robot.rotation)
                 continue
             # push command back if do not know how to process it
             robot.push_command(command)
@@ -118,3 +119,20 @@ class GameController(cocos.layer.Layer):
 
     def process_events(self):
         pass
+
+    @staticmethod
+    def get_rotation_deg(command, max_turn, robot):
+        deg = command.deg
+        if abs(deg) > max_turn:
+            deg = math.copysign(max_turn, deg)
+        command.deg -= deg
+        if command.deg != 0:
+            robot.push_command(command)
+        return deg
+
+    @staticmethod
+    def check_if_square_is_out_of_window(point, half_width):
+        window_width = consts["window"]["width"]
+        window_height = consts["window"]["height"]
+        return (window_width - half_width <= point[0]) or (half_width >= point[0]) or \
+                (window_height - half_width <= point[1]) or (half_width >= point[1])

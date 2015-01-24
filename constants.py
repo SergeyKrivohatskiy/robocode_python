@@ -28,11 +28,14 @@ consts = {
         "max_radar_turn": 45,
         "max_idle_body_turn": 10,
         "velocity_body_turn_coefficient": 0.75,
-        "max_velocity": 8
+        "max_velocity": 8,
+        "initial_energy": 100,
+        "half_width": 50
     },
     "bullet": {
         "image": 'bullet.png',
         "max_velocity": 20,
-        "velocity_power_coefficient": 3
+        "velocity_power_coefficient": 3,
+        "half_width": 5
     }
 }

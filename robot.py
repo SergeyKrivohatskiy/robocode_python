@@ -4,7 +4,6 @@ import threading
 import pyglet
 import cocos
 from constants import consts
-import cocos.euclid as eu
 from gun import Gun
 
 
@@ -13,7 +12,8 @@ class DoNothing(object):
 
 
 class Fire(object):
-    pass
+    def __init__(self, power):
+        self.power = power
 
 
 class Turn(object):
@@ -56,6 +56,7 @@ class Robot(cocos.sprite.Sprite):
         self.gun = Gun()
         self.add(self.gun)
         self.rotation = 0
+        self.energy = self.robot_consts["initial_energy"]
 
         self.new_command_event = threading.Event()
         self.get_command_event = threading.Event()
@@ -135,6 +136,10 @@ class Robot(cocos.sprite.Sprite):
 
     def back(self, distance):
         self.push_command(Move(-distance))
+        self.on_command()
+
+    def fire(self, power):
+        self.push_command(Fire(power))
         self.on_command()
 
     def get_heading(self):
