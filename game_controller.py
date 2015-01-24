@@ -40,7 +40,7 @@ def get_segment_square_intersection(segment_beg, segment_end, square_center,
     u1u2 = check_edge(p2, p3, segment_beg, segment_end, u1u2)
     u1u2 = check_edge(p3, p4, segment_beg, segment_end, u1u2)
     u1u2 = check_edge(p4, p1, segment_beg, segment_end, u1u2)
-    return u1u2(0) if u1u2 is not None else None
+    return u1u2[0] if u1u2 is not None else None
 
 
 def get_segments_intersection(segment1_beg, segment1_end, segment2_beg, segment2_end):
@@ -110,14 +110,38 @@ class GameController(cocos.layer.Layer):
         new_bullet_old_pos_new_pos = []
         for i in range(0, len(bullet_old_pos_new_pos)):
             if removed[i]:
-                    self.bullets.remove(bullet_old_pos_new_pos[i][0])
-                    self.remove(bullet_old_pos_new_pos[i][0])
+                    self.remove_bullet(bullet_old_pos_new_pos[i][0])
             else:
                 new_bullet_old_pos_new_pos.append(bullet_old_pos_new_pos[i])
         return new_bullet_old_pos_new_pos
 
+    def remove_bullet(self, bullet):
+        self.bullets.remove(bullet)
+        self.remove(bullet)
+
     def check_bullets_robots_intersection(self, bullet_old_pos_new_pos):
+        new_bullet_old_pos_new_pos = []
+        for bullet, old_pos, new_pos in bullet_old_pos_new_pos:
+            for robot in self.robots:
+                if bullet.owner == robot:
+                    # cant do suicide
+                    continue
+                u1 = get_segment_square_intersection(old_pos, new_pos, robot.position, consts["robot"]["half_width"])
+                if u1 is not None:
+                    self.remove_bullet(bullet)
+                    # TODO event and energy change
+                else:
+                    new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
         return bullet_old_pos_new_pos
+
+    def check_bullets_out_of_window(self, bullet_old_pos_new_pos):
+        new_bullet_old_pos_new_pos = []
+        for bullet, old_pos, new_pos in bullet_old_pos_new_pos:
+            if self.check_if_square_is_out_of_window(new_pos, 0):
+                self.remove_bullet(bullet)
+            else:
+                new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
+        return new_bullet_old_pos_new_pos
 
     def process_bullets(self):
         for robot in self.robots:
@@ -136,6 +160,7 @@ class GameController(cocos.layer.Layer):
             self.bullets]
         bullet_old_pos_new_pos = self.check_bullets_intersection(bullet_old_pos_new_pos)
         bullet_old_pos_new_pos = self.check_bullets_robots_intersection(bullet_old_pos_new_pos)
+        bullet_old_pos_new_pos = self.check_bullets_out_of_window(bullet_old_pos_new_pos)
         for bullet, _, new_pos in bullet_old_pos_new_pos:
             bullet.position = new_pos
 
