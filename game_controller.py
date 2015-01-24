@@ -15,7 +15,7 @@ def get_rand_position(w, h):
 
 
 class GameController(cocos.layer.Layer):
-    tic_time = 1
+    tic_time = 0.1
     # robots_list is a list of Robot class subclasses
     def __init__(self, robots_list):
         super(GameController, self).__init__()
@@ -81,17 +81,17 @@ class GameController(cocos.layer.Layer):
                 continue
             if isinstance(command, TurnGun):
                 deg = self.get_rotation_deg(command, consts["robot"]["max_gun_turn"], robot)
-                robot.gun.rotation += deg
+                robot.gun.rotation = (deg + robot.gun.rotation) % 360
                 continue
             if isinstance(command, TurnBody):
                 max_turn = consts["robot"]["max_idle_body_turn"] - consts["robot"]["velocity_body_turn_coefficient"] *\
                                                                    abs(robot.velocity)
                 deg = self.get_rotation_deg(command, max_turn if max_turn > 0 else 0, robot)
-                robot.rotation += deg
+                robot.rotation = (deg + robot.rotation) % 360
                 continue
             if isinstance(command, TurnRadar):
                 deg = self.get_rotation_deg(command, consts["robot"]["max_radar_turn"], robot)
-                robot.gun.radar.rotation += deg
+                robot.gun.radar.rotation = (deg + robot.gun.radar.rotation) % 360
                 continue
             # TODO process other commands
             robot.push_command(command)

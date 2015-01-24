@@ -16,19 +16,21 @@ class Fire(object):
     pass
 
 
-class TurnGun(object):
+class Turn(object):
     def __init__(self, deg):
         self.deg = deg
 
 
-class TurnBody(object):
-    def __init__(self, deg):
-        self.deg = deg
+class TurnGun(Turn):
+    pass
 
 
-class TurnRadar(object):
-    def __init__(self, deg):
-        self.deg = deg
+class TurnBody(Turn):
+    pass
+
+
+class TurnRadar(Turn):
+    pass
 
 
 class Robot(cocos.sprite.Sprite):
@@ -115,3 +117,12 @@ class Robot(cocos.sprite.Sprite):
     def turn_left(self, deg):
         self.push_command(TurnBody(-deg))
         self.on_command()
+
+    def get_heading(self):
+        return self.rotation
+
+    def get_gun_heading(self):
+        return (self.get_heading() + self.gun.rotation) % 360
+
+    def get_radar_heading(self):
+        return (self.get_gun_heading() + self.gun.radar.rotation) % 360
