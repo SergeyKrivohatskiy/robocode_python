@@ -5,6 +5,7 @@ import time
 import cocos.euclid as eu
 from constants import consts
 import random
+from robot import *
 
 
 def get_rand_position(w, h):
@@ -35,17 +36,37 @@ class GameController(cocos.layer.Layer):
         self.make_scan()
         self.process_events()
 
+        print(self.time)
         to_sleep = GameController.tic_time + start - time.time()
         time.sleep(to_sleep if to_sleep > 0 else 0)
 
     def prepare_commands(self):
-        pass
+        for robot in self.robots:
+            robot.prepare_command()
+            assert robot.has_command()
 
     def process_bullets(self):
-        pass
+        for robot in self.robots:
+            if not robot.has_command():
+                continue
+            command = robot.pop_command()
+            if not isinstance(command, Fire):
+                robot.push_command(command)
+                continue
+            fire = command
+            # TODO execute fire command
+
+        # TODO process bullets
 
     def process_robots(self):
-        pass
+        for robot in self.robots:
+            if not robot.has_command():
+                continue
+            command = robot.pop_command()
+            if isinstance(command, DoNothing):
+                continue
+            # TODO process other commands
+            robot.push_command(command)
 
     def make_scan(self):
         pass

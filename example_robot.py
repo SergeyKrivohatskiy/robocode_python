@@ -6,4 +6,5 @@ from robot import Robot
 class ExampleRobot(Robot):
     def run(self):
         while True:
-            pass
+            print("ExampleRobotRun")
+            self.do_nothing()
