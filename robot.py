@@ -64,6 +64,7 @@ class Robot(cocos.sprite.Sprite):
         self.get_command_event.clear()
         self.commands = []
         self.run_thread = threading.Thread(target=self.run)
+        self.run_thread.setDaemon(True)
         self.run_thread.start()
         self.new_command_event.wait()
         self.new_command_event.clear()
