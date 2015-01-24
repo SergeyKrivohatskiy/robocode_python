@@ -19,7 +19,10 @@ consts = {
         "width": 50,
         "height": 50,
         "resources": {
-            "body": 'robot.png'
-        }
+            "body": 'robot.png',
+            "gun": 'gun.png',
+            "radar": 'radar.png'
+        },
+        "initial_gun_heat": 3
     }
 }

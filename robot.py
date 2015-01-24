@@ -6,6 +6,7 @@ import cocos
 from constants import consts
 import cocos.euclid as eu
 import cocos.collision_model as cm
+from gun import Gun
 
 
 class Robot(cocos.sprite.Sprite):
@@ -17,3 +18,5 @@ class Robot(cocos.sprite.Sprite):
         self.position = position
         self.velocity = eu.Vector2(0, 0)
         self.acceleration = eu.Vector2(0, 0)
+        self.gun = Gun()
+        self.add(self.gun)
