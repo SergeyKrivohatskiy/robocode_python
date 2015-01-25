@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-import math
-
 __author__ = 'Sergey Krivohatskiy'
 import threading
 import pyglet
 import cocos
-from constants import consts
 from gun import Gun
+import constants
+import math
 
 
 class DoNothing(object):
@@ -63,8 +62,7 @@ class HitByBullet(object):
 class Robot(cocos.sprite.Sprite):
 
     def __init__(self, game_controller, position):
-        self.robot_consts = consts["robot"]
-        super(Robot, self).__init__(pyglet.resource.image(self.robot_consts["resources"]["body"]), position)
+        super(Robot, self).__init__(pyglet.resource.image(constants.robot_body_image), position)
         self.controller = game_controller
         self.position = position
         self.velocity = 0
@@ -72,7 +70,7 @@ class Robot(cocos.sprite.Sprite):
         self.gun = Gun()
         self.add(self.gun)
         self.rotation = 0
-        self.energy = self.robot_consts["initial_energy"]
+        self.energy = constants.robot_initial_energy
         self.points = 0
         self.event = None
         self.processing_event = False

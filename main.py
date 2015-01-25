@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 __author__ = 'Sergey Krivohatskiy'
 import game_controller
-from constants import consts
+import constants
 import example_robots
 from robot import Robot
 import cocos
@@ -25,11 +25,13 @@ def main():
         robots_list = [x for x in robots_list if issubclass(x, Robot)]
         if len(robots_list) == 0:
             raise NoRobotsException()
-        cocos.director.director.init(**consts["window"])
+        cocos.director.director.init(constants.window_width, constants.window_height, constants.window_vsync,
+                                     constants.window_resizable)
         game_layer = game_controller.GameController(robots_list)
         scene = cocos.scene.Scene()
-        background_color = consts["background_color"]
-        scene.add(cocos.layer.ColorLayer(background_color["r"], background_color["g"], background_color["b"], 255), z=-1)
+        scene.add(cocos.layer.ColorLayer(constants.background_color_r, constants.background_color_g,
+                                         constants.background_color_b, 255),
+                  z=-1)
         scene.add(game_layer)
         cocos.director.director.run(scene)
     except NoRobotsException as _:

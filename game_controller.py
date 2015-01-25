@@ -1,15 +1,14 @@
 #!/usr/bin/env python
-from itertools import combinations
-
 __author__ = 'Sergey Krivohatskiy'
 import cocos
-from constants import consts
 import time
 import cocos.euclid as eu
 import random
 import math
 from robot import HitByBullet, Fire, TurnGun, TurnBody, TurnRadar, DoNothing, Move, ScannedRobot
 from bullet import Bullet
+from itertools import combinations
+import constants
 
 
 class GameController(cocos.layer.Layer):
@@ -18,9 +17,9 @@ class GameController(cocos.layer.Layer):
     # robots_list is a list of Robot class subclasses
     def __init__(self, robots_list):
         super(GameController, self).__init__()
-        self.w = consts["window"]["width"]
-        self.h = consts["window"]["height"]
-        positions = get_rand_positions(self.w, self.h, len(robots_list), 2 * consts["robot"]["half_width"])
+        self.w = constants.window_width
+        self.h = constants.window_height
+        positions = get_rand_positions(self.w, self.h, len(robots_list), 2 * constants.robot_half_width)
         self.robots = [robot_class(self, positions[i]) for i, robot_class in enumerate(robots_list)]
         self.bullets = []
         self.status_labels = {}
@@ -50,7 +49,7 @@ class GameController(cocos.layer.Layer):
         self.robot_events = {}
         for robot in self.robots:
             label = self.status_labels[robot]
-            label.position = (robot.position[0], robot.position[1] - consts["robot"]["half_width"] - 10)
+            label.position = (robot.position[0], robot.position[1] - constants.robot_half_width - 10)
             label.element.document.text = "Energy %.0f, Score %.0f" % (robot.energy, robot.points)
 
         to_sleep = GameController.tic_time + start - time.time()
@@ -88,8 +87,8 @@ class GameController(cocos.layer.Layer):
                 if bullet.owner == robot:
                     # cant do suicide
                     continue
-                u1 = get_segment_rect_intersection(old_pos, new_pos, robot.position, consts["robot"]["half_width"],
-                                                   consts["robot"]["half_width"])
+                u1 = get_segment_rect_intersection(old_pos, new_pos, robot.position, constants.robot_half_width,
+                                                   constants.robot_half_width)
                 if u1 is None:
                     continue
                 removed = True
@@ -116,7 +115,7 @@ class GameController(cocos.layer.Layer):
     def process_bullets(self):
         for robot in self.robots:
             if robot.gun.heat > 0:
-                robot.gun.heat = max(0, robot.gun.heat - consts["robot"]["gun_cooling"])
+                robot.gun.heat = max(0, robot.gun.heat - constants.robot_gun_cooling)
             if not robot.has_command():
                 continue
             command = robot.pop_command()
@@ -140,23 +139,23 @@ class GameController(cocos.layer.Layer):
         pass
 
     def turn_gun_handler(self, command, robot):
-        deg = self.get_rotation_deg(command, consts["robot"]["max_gun_turn"], robot)
+        deg = self.get_rotation_deg(command, constants.robot_max_gun_turn, robot)
         robot.gun.rotation = (deg + robot.gun.rotation) % 360
 
     def turn_body_handler(self, command, robot):
-        max_turn = consts["robot"]["max_idle_body_turn"] - consts["robot"]["velocity_body_turn_coefficient"] * abs(
+        max_turn = constants.robot_max_idle_body_turn - constants.robot_velocity_body_turn_coefficient * abs(
             robot.velocity)
         deg = self.get_rotation_deg(command, max_turn if max_turn > 0 else 0, robot)
         robot.rotation = (deg + robot.rotation) % 360
 
     def turn_radar_handler(self, command, robot):
-        deg = self.get_rotation_deg(command, consts["robot"]["max_radar_turn"], robot)
+        deg = self.get_rotation_deg(command, constants.robot_max_radar_turn, robot)
         robot.gun.radar.rotation = (deg + robot.gun.radar.rotation) % 360
 
     def move_handler(self, command, robot):
         # TODO acceleration
         s = command.distance
-        max_velocity = consts["robot"]["max_velocity"]
+        max_velocity = constants.robot_max_velocity
         if abs(s) > max_velocity:
             s = math.copysign(max_velocity, s)
         command.distance -= s
@@ -165,11 +164,11 @@ class GameController(cocos.layer.Layer):
         robot.velocity = s
 
     def get_segment_border_intersection(self, segment_begin, segment_end):
-        half_window_width = consts["window"]["width"] / 2
-        half_window_height = consts["window"]["height"] / 2
+        half_window_width = constants.window_width / 2
+        half_window_height = constants.window_height / 2
         # Minkowski addition
-        half_width = half_window_width - consts["robot"]["half_width"]
-        half_height = half_window_height - consts["robot"]["half_width"]
+        half_width = half_window_width - constants.robot_half_width
+        half_height = half_window_height - constants.robot_half_width
         center = (half_window_width, half_window_height)
         u1 = None
         if check_if_point_in_rect(segment_end, center, half_width, half_height) != check_if_point_in_rect(segment_begin,
@@ -192,8 +191,8 @@ class GameController(cocos.layer.Layer):
 
         # move robots
         for robot in self.robots:
-            if abs(robot.velocity) > consts["robot"]["max_velocity"]:
-                robot.velocity = math.copysign(consts["robot"]["max_velocity"], robot.velocity)
+            if abs(robot.velocity) > constants.robot_max_velocity:
+                robot.velocity = math.copysign(constants.robot_max_velocity, robot.velocity)
             if robot.velocity == 0:
                 continue
             old_pos = robot.position
@@ -206,8 +205,8 @@ class GameController(cocos.layer.Layer):
                 if second_robot == robot:
                     continue
                 new_u1 = get_segment_rect_intersection(old_pos, new_pos, second_robot.position,
-                                                       2 * consts["robot"]["half_width"],
-                                                       2 * consts["robot"]["half_width"])
+                                                       2 * constants.robot_half_width,
+                                                       2 * constants.robot_half_width)
                 if u1 is None or (new_u1 is not None and new_u1 < u1):
                     u1 = new_u1
                     where_min = second_robot
@@ -235,13 +234,13 @@ class GameController(cocos.layer.Layer):
         for robot in self.robots:
             radar_rotation = robot.get_radar_heading()
             radar_line_beg = robot.position
-            radar_line_end = radar_line_beg + consts["robot"]["radar_scan_length"] * deg_to_vector(radar_rotation)
+            radar_line_end = radar_line_beg + constants.robot_radar_scan_length * deg_to_vector(radar_rotation)
             u1 = None
             for second_robot in self.robots:
                 if second_robot == robot:
                     continue
                 new_u1 = get_segment_rect_intersection(radar_line_beg, radar_line_end, second_robot.position,
-                                                       consts["robot"]["half_width"], consts["robot"]["half_width"])
+                                                       constants.robot_half_width, constants.robot_half_width)
                 if u1 is None or (new_u1 is not None and new_u1 < u1):
                     u1 = new_u1
                     where_min = second_robot
@@ -311,22 +310,21 @@ def get_segments_intersection(segment1_beg, segment1_end, segment2_beg, segment2
     u1 = (segment2_end[0] - segment2_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
          (segment2_end[1] - segment2_beg[1]) * (segment1_beg[0] - segment2_beg[0])
     u1 /= divisor
-    intersection_delta = consts["world"]["intersection_delta"]
-    if u1 >= 1 - intersection_delta or u1 <= intersection_delta:
+    if u1 >= 1 or u1 <= 0:
         # intersection is out of segment 1
         return None
     u2 = (segment1_end[0] - segment1_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
          (segment1_end[1] - segment1_beg[1]) * (segment1_beg[0] - segment2_beg[0])
     u2 /= divisor
-    if u2 >= 1 - intersection_delta or u2 <= intersection_delta:
+    if u2 >= 1 or u2 <= 0:
         # intersection is out of segment 2
         return None
     return u1, u2
 
 
 def check_if_square_is_out_of_window(point, half_width):
-    window_width = consts["window"]["width"]
-    window_height = consts["window"]["height"]
+    window_width = constants.window_width
+    window_height = constants.window_height
     return (window_width - half_width <= point[0]) or (half_width >= point[0]) or \
            (window_height - half_width <= point[1]) or (half_width >= point[1])
 
