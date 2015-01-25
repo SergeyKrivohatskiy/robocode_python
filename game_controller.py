@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-from utils import get_segment_rect_intersection, check_if_point_in_rect, check_if_square_is_out_of_window, \
-    get_segments_intersection, get_rand_positions
-
 __author__ = 'Sergey Krivohatskiy'
 import cocos
 import time
 import math
 from robot import HitByBullet, Fire, TurnGun, TurnBody, TurnRadar, DoNothing, Move, ScannedRobot
+from utils import get_segment_rect_intersection, check_if_point_in_rect, check_if_square_is_out_of_window, \
+    get_segments_intersection, get_rand_positions
 from bullet import Bullet
 from itertools import combinations, chain
 import constants

@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-import random
-
 __author__ = 'Sergey Krivohatskiy'
 import math
 import cocos.euclid as eu
 import constants
+import random
 
 
 def deg_to_vector(rotation):
