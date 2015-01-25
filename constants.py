@@ -32,7 +32,8 @@ consts = {
         "max_brake_acceleration": 2,
         "initial_energy": 100,
         "half_width": 50,
-        "gun_cooling": 0.1
+        "gun_cooling": 0.1,
+        "radar_scan_length": 1200
     },
     "bullet": {
         "image": 'bullet.png',

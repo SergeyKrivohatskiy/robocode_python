@@ -15,14 +15,14 @@ def load_robots():
     return [example_robots.MyFirstRobot, example_robots.Fire] * 2
 
 
-class NoRobotsException(BaseException):
+class NoRobotsException(Exception):
     pass
 
 
 def main():
     try:
         robots_list = load_robots()
-        robots_list = list(filter(lambda x: issubclass(x, Robot), robots_list))
+        robots_list = [x for x in robots_list if issubclass(x, Robot)]
         if len(robots_list) == 0:
             raise NoRobotsException()
         cocos.director.director.init(**consts["window"])
@@ -32,10 +32,10 @@ def main():
         scene.add(cocos.layer.ColorLayer(background_color["r"], background_color["g"], background_color["b"], 255), z=-1)
         scene.add(game_layer)
         cocos.director.director.run(scene)
-    except NoRobotsException as e:
+    except NoRobotsException as _:
         print('There is no robots in robots_list')
         return -2
-    except BaseException as e:
+    except Exception as e:
         print('Unexpected exception: ' + str(e))
         return -3
 

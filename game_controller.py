@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import math
+from itertools import combinations
 
 __author__ = 'Sergey Krivohatskiy'
 import cocos
@@ -7,8 +7,9 @@ from constants import consts
 import time
 import cocos.euclid as eu
 import random
-from robot import *
-from bullet import *
+import math
+from robot import HitByBullet, Fire, TurnGun, TurnBody, TurnRadar, DoNothing, Move, ScannedRobot
+from bullet import Bullet
 
 
 class GameController(cocos.layer.Layer):
@@ -20,16 +21,20 @@ class GameController(cocos.layer.Layer):
         self.w = consts["window"]["width"]
         self.h = consts["window"]["height"]
         positions = get_rand_positions(self.w, self.h, len(robots_list), 2 * consts["robot"]["half_width"])
-        self.robots = [robots_list[i](self, positions[i]) for i in range(0, len(robots_list))]
+        self.robots = [robot_class(self, positions[i]) for i, robot_class in enumerate(robots_list)]
         self.bullets = []
         self.status_labels = {}
         for robot in self.robots:
             self.add(robot, z=1)
-            self.status_labels[robot] = cocos.text.Label("",
-                                                         (robot.position[0], robot.position[1] - 60))
+            self.status_labels[robot] = cocos.text.Label("")
             self.add(self.status_labels[robot], z=3)
         self.time = 0
         self.robot_events = {}
+        self.command_handlers = {TurnGun: self.turn_gun_handler,
+                                 TurnRadar: self.turn_radar_handler,
+                                 TurnBody: self.turn_body_handler,
+                                 DoNothing: self.do_nothing_handler,
+                                 Move: self.move_handler}
         self.do(cocos.actions.Repeat(self.update))
 
     @cocos.actions.CallFuncS
@@ -45,7 +50,7 @@ class GameController(cocos.layer.Layer):
         self.robot_events = {}
         for robot in self.robots:
             label = self.status_labels[robot]
-            label.position = (robot.position[0], robot.position[1] - 60)
+            label.position = (robot.position[0], robot.position[1] - consts["robot"]["half_width"] - 10)
             label.element.document.text = "Energy %.0f, Score %.0f" % (robot.energy, robot.points)
 
         to_sleep = GameController.tic_time + start - time.time()
@@ -56,30 +61,28 @@ class GameController(cocos.layer.Layer):
             robot.prepare_command()
             assert robot.has_command()
 
-    def check_bullets_intersection(self, bullet_old_pos_new_pos):
-        removed = [False for _ in bullet_old_pos_new_pos]
-        for i in range(0, len(bullet_old_pos_new_pos)):
-            bullet_step1 = bullet_old_pos_new_pos[i]
-            for j in range(i + 1, len(bullet_old_pos_new_pos)):
-                bullet_step2 = bullet_old_pos_new_pos[j]
-                u1u2 = get_segments_intersection(bullet_step1[1], bullet_step1[2], bullet_step2[1], bullet_step2[2])
-                if u1u2 is not None:
-                    removed[i] = removed[j] = True
-        new_bullet_old_pos_new_pos = []
-        for i in range(0, len(bullet_old_pos_new_pos)):
+    def check_bullets_intersection(self, bullet_steps):
+        removed = [False for _ in bullet_steps]
+        for i, j in combinations(range(0, len(bullet_steps)), 2):
+            u1u2 = get_segments_intersection(bullet_steps[i][1], bullet_steps[i][2], bullet_steps[j][1],
+                                             bullet_steps[j][2])
+            if u1u2 is not None:
+                removed[i] = removed[j] = True
+        new_bullet_steps = []
+        for i, bullet_step in enumerate(bullet_steps):
             if removed[i]:
-                self.remove_bullet(bullet_old_pos_new_pos[i][0])
+                self.remove_bullet(bullet_step[0])
             else:
-                new_bullet_old_pos_new_pos.append(bullet_old_pos_new_pos[i])
-        return new_bullet_old_pos_new_pos
+                new_bullet_steps.append(bullet_step)
+        return new_bullet_steps
 
     def remove_bullet(self, bullet):
         self.bullets.remove(bullet)
         self.remove(bullet)
 
-    def check_bullets_robots_intersection(self, bullet_old_pos_new_pos):
-        new_bullet_old_pos_new_pos = []
-        for bullet, old_pos, new_pos in bullet_old_pos_new_pos:
+    def check_bullets_robots_intersection(self, bullet_steps):
+        new_bullet_steps = []
+        for bullet, old_pos, new_pos in bullet_steps:
             removed = False
             for robot in self.robots:
                 if bullet.owner == robot:
@@ -98,17 +101,17 @@ class GameController(cocos.layer.Layer):
             if removed:
                 self.remove_bullet(bullet)
             else:
-                new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
-        return new_bullet_old_pos_new_pos
+                new_bullet_steps.append((bullet, old_pos, new_pos))
+        return new_bullet_steps
 
-    def check_bullets_out_of_window(self, bullet_old_pos_new_pos):
-        new_bullet_old_pos_new_pos = []
-        for bullet, old_pos, new_pos in bullet_old_pos_new_pos:
+    def check_bullets_out_of_window(self, bullet_steps):
+        new_bullet_steps = []
+        for bullet, old_pos, new_pos in bullet_steps:
             if check_if_square_is_out_of_window(new_pos, 0):
                 self.remove_bullet(bullet)
             else:
-                new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
-        return new_bullet_old_pos_new_pos
+                new_bullet_steps.append((bullet, old_pos, new_pos))
+        return new_bullet_steps
 
     def process_bullets(self):
         for robot in self.robots:
@@ -124,32 +127,33 @@ class GameController(cocos.layer.Layer):
             self.add(new_bullet, z=2)
             self.bullets.append(new_bullet)
 
-        bullet_old_pos_new_pos = [
+        bullet_steps = [
             (bullet, bullet.position, bullet.position + bullet.velocity * deg_to_vector(bullet.rotation)) for bullet in
             self.bullets]
-        bullet_old_pos_new_pos = self.check_bullets_intersection(bullet_old_pos_new_pos)
-        bullet_old_pos_new_pos = self.check_bullets_robots_intersection(bullet_old_pos_new_pos)
-        bullet_old_pos_new_pos = self.check_bullets_out_of_window(bullet_old_pos_new_pos)
-        for bullet, _, new_pos in bullet_old_pos_new_pos:
+        bullet_steps = self.check_bullets_intersection(bullet_steps)
+        bullet_steps = self.check_bullets_robots_intersection(bullet_steps)
+        bullet_steps = self.check_bullets_out_of_window(bullet_steps)
+        for bullet, _, new_pos in bullet_steps:
             bullet.position = new_pos
 
-    def process_turn_command(self, command, robot):
-        if isinstance(command, TurnGun):
-            deg = self.get_rotation_deg(command, consts["robot"]["max_gun_turn"], robot)
-            robot.gun.rotation = (deg + robot.gun.rotation) % 360
-            return
-        if isinstance(command, TurnBody):
-            max_turn = consts["robot"]["max_idle_body_turn"] - consts["robot"]["velocity_body_turn_coefficient"] * \
-                                                               abs(robot.velocity)
-            deg = self.get_rotation_deg(command, max_turn if max_turn > 0 else 0, robot)
-            robot.rotation = (deg + robot.rotation) % 360
-            return
-        if isinstance(command, TurnRadar):
-            deg = self.get_rotation_deg(command, consts["robot"]["max_radar_turn"], robot)
-            robot.gun.radar.rotation = (deg + robot.gun.radar.rotation) % 360
-            return
+    def do_nothing_handler(self, _, __):
+        pass
 
-    def process_move(self, command, robot):
+    def turn_gun_handler(self, command, robot):
+        deg = self.get_rotation_deg(command, consts["robot"]["max_gun_turn"], robot)
+        robot.gun.rotation = (deg + robot.gun.rotation) % 360
+
+    def turn_body_handler(self, command, robot):
+        max_turn = consts["robot"]["max_idle_body_turn"] - consts["robot"]["velocity_body_turn_coefficient"] * abs(
+            robot.velocity)
+        deg = self.get_rotation_deg(command, max_turn if max_turn > 0 else 0, robot)
+        robot.rotation = (deg + robot.rotation) % 360
+
+    def turn_radar_handler(self, command, robot):
+        deg = self.get_rotation_deg(command, consts["robot"]["max_radar_turn"], robot)
+        robot.gun.radar.rotation = (deg + robot.gun.radar.rotation) % 360
+
+    def move_handler(self, command, robot):
         # TODO acceleration
         s = command.distance
         max_velocity = consts["robot"]["max_velocity"]
@@ -160,6 +164,21 @@ class GameController(cocos.layer.Layer):
             robot.push_command(command)
         robot.velocity = s
 
+    def get_segment_border_intersection(self, segment_begin, segment_end):
+        half_window_width = consts["window"]["width"] / 2
+        half_window_height = consts["window"]["height"] / 2
+        # Minkowski addition
+        half_width = half_window_width - consts["robot"]["half_width"]
+        half_height = half_window_height - consts["robot"]["half_width"]
+        center = (half_window_width, half_window_height)
+        u1 = None
+        if check_if_point_in_rect(segment_end, center, half_width, half_height) != check_if_point_in_rect(segment_begin,
+                                                                                                      center,
+                                                                                                      half_width,
+                                                                                                      half_height):
+            u1 = get_segment_rect_intersection(segment_end, segment_begin, center,
+                                               half_width, half_height)
+        return u1
 
     def process_robots(self):
         # process commands
@@ -168,13 +187,7 @@ class GameController(cocos.layer.Layer):
             if not robot.has_command():
                 continue
             command = robot.pop_command()
-            if isinstance(command, DoNothing):
-                continue
-            if isinstance(command, Turn):
-                self.process_turn_command(command, robot)
-                continue
-            if isinstance(command, Move):
-                self.process_move(command, robot)
+            self.command_handlers[type(command)](command, robot)
 
 
         # move robots
@@ -186,19 +199,8 @@ class GameController(cocos.layer.Layer):
             old_pos = robot.position
             new_pos = robot.position + robot.velocity * deg_to_vector(robot.rotation)
             # first intersect with borders
-            half_window_width = consts["window"]["width"] / 2
-            half_window_height = consts["window"]["height"] / 2
-            # Minkowski addition
-            half_width = half_window_width - consts["robot"]["half_width"]
-            half_height = half_window_height - consts["robot"]["half_width"]
-            center = (half_window_width, half_window_height)
-            u1 = None
-            if check_if_point_in_rect(old_pos, center, half_width, half_height) != check_if_point_in_rect(new_pos,
-                                                                                                          center,
-                                                                                                          half_width,
-                                                                                                          half_height):
-                u1 = get_segment_rect_intersection(old_pos, new_pos, center,
-                                                   half_width, half_height)
+            u1 = self.get_segment_border_intersection(new_pos, old_pos)
+
             where_min = None
             for second_robot in self.robots:
                 if second_robot == robot:
@@ -233,7 +235,7 @@ class GameController(cocos.layer.Layer):
         for robot in self.robots:
             radar_rotation = robot.get_radar_heading()
             radar_line_beg = robot.position
-            radar_line_end = radar_line_beg + 1200 * deg_to_vector(radar_rotation)
+            radar_line_end = radar_line_beg + consts["robot"]["radar_scan_length"] * deg_to_vector(radar_rotation)
             u1 = None
             for second_robot in self.robots:
                 if second_robot == robot:
@@ -244,7 +246,7 @@ class GameController(cocos.layer.Layer):
                     u1 = new_u1
                     where_min = second_robot
             if u1 is not None:
-                self.robot_events[robot] = ScannedRobot(robot, second_robot)
+                self.robot_events[robot] = ScannedRobot(robot, where_min)
 
     def process_events(self):
         for robot in self.robot_events:

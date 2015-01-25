@@ -150,14 +150,6 @@ class Robot(cocos.sprite.Sprite):
         self.push_command(TurnBody(-deg))
         self.on_command()
 
-    def turn_right(self, deg):
-        self.push_command(TurnBody(deg))
-        self.on_command()
-
-    def turn_left(self, deg):
-        self.push_command(TurnBody(-deg))
-        self.on_command()
-
     def ahead(self, distance):
         self.push_command(Move(distance))
         self.on_command()
