@@ -83,12 +83,13 @@ class GameController(cocos.layer.Layer):
         new_bullet_steps = []
         for bullet, old_pos, new_pos in bullet_steps:
             removed = False
+            bullet_move_segment = (old_pos, new_pos)
             for robot in self.robots:
                 if bullet.owner == robot:
                     # cant do suicide
                     continue
-                u1 = get_segment_rect_intersection(old_pos, new_pos, robot.position, constants.robot_half_width,
-                                                   constants.robot_half_width)
+                robot_rect = (robot.position, constants.robot_half_width, constants.robot_half_width)
+                u1 = get_segment_rect_intersection(bullet_move_segment, robot_rect)
                 if u1 is None:
                     continue
                 removed = True
@@ -163,20 +164,20 @@ class GameController(cocos.layer.Layer):
             robot.push_command(command)
         robot.velocity = s
 
-    def get_segment_border_intersection(self, segment_begin, segment_end):
+    def get_segment_border_intersection(self, segment):
         half_window_width = constants.window_width / 2
         half_window_height = constants.window_height / 2
         # Minkowski addition
         half_width = half_window_width - constants.robot_half_width
         half_height = half_window_height - constants.robot_half_width
         center = (half_window_width, half_window_height)
+        window_rect = (center, half_width, half_height)
         u1 = None
-        if check_if_point_in_rect(segment_end, center, half_width, half_height) != check_if_point_in_rect(segment_begin,
-                                                                                                      center,
-                                                                                                      half_width,
-                                                                                                      half_height):
-            u1 = get_segment_rect_intersection(segment_end, segment_begin, center,
-                                               half_width, half_height)
+        if check_if_point_in_rect(segment[1], center, half_width, half_height) != check_if_point_in_rect(segment[0],
+                                                                                                          center,
+                                                                                                          half_width,
+                                                                                                          half_height):
+            u1 = get_segment_rect_intersection(segment, window_rect)
         return u1
 
     def process_robots(self):
@@ -197,16 +198,17 @@ class GameController(cocos.layer.Layer):
                 continue
             old_pos = robot.position
             new_pos = robot.position + robot.velocity * deg_to_vector(robot.rotation)
+            robot_move_segment = (old_pos, new_pos)
             # first intersect with borders
-            u1 = self.get_segment_border_intersection(new_pos, old_pos)
+            u1 = self.get_segment_border_intersection(robot_move_segment)
 
             where_min = None
             for second_robot in self.robots:
                 if second_robot == robot:
                     continue
-                new_u1 = get_segment_rect_intersection(old_pos, new_pos, second_robot.position,
-                                                       2 * constants.robot_half_width,
-                                                       2 * constants.robot_half_width)
+                robots_minkowski_rect = (
+                    second_robot.position, 2 * constants.robot_half_width, 2 * constants.robot_half_width)
+                new_u1 = get_segment_rect_intersection(robot_move_segment, robots_minkowski_rect)
                 if u1 is None or (new_u1 is not None and new_u1 < u1):
                     u1 = new_u1
                     where_min = second_robot
@@ -235,12 +237,13 @@ class GameController(cocos.layer.Layer):
             radar_rotation = robot.get_radar_heading()
             radar_line_beg = robot.position
             radar_line_end = radar_line_beg + constants.robot_radar_scan_length * deg_to_vector(radar_rotation)
+            radar_segment = (radar_line_end, radar_line_beg)
             u1 = None
             for second_robot in self.robots:
                 if second_robot == robot:
                     continue
-                new_u1 = get_segment_rect_intersection(radar_line_beg, radar_line_end, second_robot.position,
-                                                       constants.robot_half_width, constants.robot_half_width)
+                robot_rect = (second_robot.position, constants.robot_half_width, constants.robot_half_width)
+                new_u1 = get_segment_rect_intersection(radar_segment, robot_rect)
                 if u1 is None or (new_u1 is not None and new_u1 < u1):
                     u1 = new_u1
                     where_min = second_robot
@@ -285,13 +288,14 @@ def check_edge(p1, p2, segment_beg, segment_end, u1u2):
     return u1u2
 
 
-def get_segment_rect_intersection(segment_beg, segment_end, square_center,
-                                  half_width, half_height):
+def get_segment_rect_intersection(segment, rect):
+    segment_beg, segment_end = segment
+    rect_center, half_width, half_height = rect
     # square points
-    p1 = (square_center[0] - half_width, square_center[1] - half_height)
-    p2 = (square_center[0] - half_width, square_center[1] + half_height)
-    p3 = (square_center[0] + half_width, square_center[1] + half_height)
-    p4 = (square_center[0] + half_width, square_center[1] - half_height)
+    p1 = (rect_center[0] - half_width, rect_center[1] - half_height)
+    p2 = (rect_center[0] - half_width, rect_center[1] + half_height)
+    p3 = (rect_center[0] + half_width, rect_center[1] + half_height)
+    p4 = (rect_center[0] + half_width, rect_center[1] - half_height)
 
     u1u2 = None
     u1u2 = check_edge(p1, p2, segment_beg, segment_end, u1u2)
