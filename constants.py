@@ -8,11 +8,11 @@ window_resizable = True
 
 background_color_r = 23
 background_color_g = 23
-background_color_b= 23
+background_color_b = 23
 
 bullet_image = 'bullet.png'
 bullet_max_velocity = 20
-bullet_velocity_power_coefficient= 3
+bullet_velocity_power_coefficient = 3
 bullet_half_width = 5
 
 robot_body_image = 'robot.png'

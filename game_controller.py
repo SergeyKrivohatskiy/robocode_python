@@ -1,6 +1,4 @@
 #!/usr/bin/env python
-import operator
-
 __author__ = 'Sergey Krivohatskiy'
 import cocos
 import time
@@ -11,6 +9,7 @@ from robot import HitByBullet, Fire, TurnGun, TurnBody, TurnRadar, DoNothing, Mo
 from bullet import Bullet
 from itertools import combinations, chain
 import constants
+import operator
 
 
 class GameController(cocos.layer.Layer):
@@ -196,7 +195,6 @@ class GameController(cocos.layer.Layer):
                 continue
             command = robot.pop_command()
             self.command_handlers[type(command)](command, robot)
-
 
         # move robots
         for robot in self.robots:

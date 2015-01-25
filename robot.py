@@ -60,7 +60,6 @@ class HitByBullet(object):
 
 
 class Robot(cocos.sprite.Sprite):
-
     def __init__(self, game_controller, position):
         super(Robot, self).__init__(pyglet.resource.image(constants.robot_body_image), position)
         self.controller = game_controller
