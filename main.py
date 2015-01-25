@@ -12,7 +12,7 @@ def load_robots():
     load Robot subclasses list from somewhere
     :return: Robot subclasses list
     """
-    return [example_robot.ExampleRobot, example_robot.ExampleRobot]
+    return [example_robot.ExampleRobot] * 20
 
 
 class NoRobotsException(BaseException):
@@ -36,7 +36,7 @@ def main():
         print('There is no robots in robots_list')
         return -1
     except BaseException as e:
-        print('Unexpected exception: ' + e.message)
+        print('Unexpected exception: ' + str(e))
         return -2
 
 

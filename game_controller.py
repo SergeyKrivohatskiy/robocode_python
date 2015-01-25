@@ -10,81 +10,16 @@ import random
 from robot import *
 from bullet import *
 
-
-def get_rand_position(w, h):
-    return eu.Vector2(random.randrange(w), random.randrange(h))
-
-
-def deg_to_vector(rotation):
-    radians_rotation = math.radians(rotation)
-    return eu.Vector2(math.cos(radians_rotation), -math.sin(radians_rotation))
-
-
-def check_edge(p1, p2, segment_beg, segment_end, u1u2):
-    new_intersection = get_segments_intersection(segment_beg, segment_end, p1, p2)
-    if u1u2 is None or (new_intersection is not None and new_intersection(0) < u1u2(0)):
-        u1u2 = new_intersection
-    return u1u2
-
-
-def get_segment_rect_intersection(segment_beg, segment_end, square_center,
-                                  half_width, half_height):
-    # square points
-    p1 = (square_center[0] - half_width, square_center[1] - half_height)
-    p2 = (square_center[0] - half_width, square_center[1] + half_height)
-    p3 = (square_center[0] + half_width, square_center[1] + half_height)
-    p4 = (square_center[0] + half_width, square_center[1] - half_height)
-
-    u1u2 = None
-    u1u2 = check_edge(p1, p2, segment_beg, segment_end, u1u2)
-    u1u2 = check_edge(p2, p3, segment_beg, segment_end, u1u2)
-    u1u2 = check_edge(p3, p4, segment_beg, segment_end, u1u2)
-    u1u2 = check_edge(p4, p1, segment_beg, segment_end, u1u2)
-    return u1u2[0] if u1u2 is not None else None
-
-
-def get_segments_intersection(segment1_beg, segment1_end, segment2_beg, segment2_end):
-    divisor = (segment2_end[1] - segment2_beg[1]) * (segment1_end[0] - segment1_beg[0]) - \
-              (segment2_end[0] - segment2_beg[0]) * (segment1_end[1] - segment1_beg[1])
-    if divisor == 0:
-        # parallel segments
-        return None
-    u1 = (segment2_end[0] - segment2_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
-         (segment2_end[1] - segment2_beg[1]) * (segment1_beg[0] - segment2_beg[0])
-    u1 /= divisor
-    intersection_delta = consts["world"]["intersection_delta"]
-    if u1 >= 1 - intersection_delta or u1 <= intersection_delta:
-        # intersection is out of segment 1
-        return None
-    u2 = (segment1_end[0] - segment1_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
-         (segment1_end[1] - segment1_beg[1]) * (segment1_beg[0] - segment2_beg[0])
-    u2 /= divisor
-    if u2 >= 1 - intersection_delta or u2 <= intersection_delta:
-        # intersection is out of segment 2
-        return None
-    return u1, u2
-
-
-def check_if_square_is_out_of_window(point, half_width):
-    window_width = consts["window"]["width"]
-    window_height = consts["window"]["height"]
-    return (window_width - half_width <= point[0]) or (half_width >= point[0]) or \
-           (window_height - half_width <= point[1]) or (half_width >= point[1])
-
-
-def check_if_point_in_rect(point, square_center, half_width, half_height):
-    return (square_center[0] - half_width <= point[0]) and (square_center[0] + half_width >= point[0]) and \
-           (square_center[1] - half_height <= point[1]) and (square_center[1] + half_height >= point[1])
-
-
 class GameController(cocos.layer.Layer):
-    tic_time = 0.1
+    tic_time = 0
+
     # robots_list is a list of Robot class subclasses
     def __init__(self, robots_list):
         super(GameController, self).__init__()
         self.w = consts["window"]["width"]
         self.h = consts["window"]["height"]
-        self.robots = [robot_class(self, get_rand_position(self.w, self.h)) for robot_class in robots_list]
+        positions = get_rand_positions(self.w, self.h, len(robots_list), 2 * consts["robot"]["half_width"])
+        self.robots = [robots_list[i](self, positions[i]) for i in range(0, len(robots_list))]
         self.bullets = []
         for robot in self.robots:
             self.add(robot, z=1)
@@ -134,20 +69,25 @@ class GameController(cocos.layer.Layer):
     def check_bullets_robots_intersection(self, bullet_old_pos_new_pos):
         new_bullet_old_pos_new_pos = []
         for bullet, old_pos, new_pos in bullet_old_pos_new_pos:
+            removed = False
             for robot in self.robots:
                 if bullet.owner == robot:
                     # cant do suicide
                     continue
                 u1 = get_segment_rect_intersection(old_pos, new_pos, robot.position, consts["robot"]["half_width"],
                                                    consts["robot"]["half_width"])
-                if u1 is not None:
-                    self.remove_bullet(bullet)
-                    # TODO event
-                    robot.energy -= bullet.robot_damage
-                    bullet.owner.energy += bullet.energy_and_points_boost
-                    bullet.owner.points += bullet.energy_and_points_boost
-                else:
-                    new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
+                if u1 is None:
+                    continue
+                removed = True
+                # TODO event
+                robot.energy -= bullet.robot_damage
+                bullet.owner.energy += bullet.energy_and_points_boost
+                bullet.owner.points += bullet.energy_and_points_boost
+                break
+            if removed:
+                self.remove_bullet(bullet)
+            else:
+                new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
         return new_bullet_old_pos_new_pos
 
     def check_bullets_out_of_window(self, bullet_old_pos_new_pos):
@@ -297,3 +237,79 @@ class GameController(cocos.layer.Layer):
         if command.deg != 0:
             robot.push_command(command)
         return deg
+
+
+
+
+
+def get_rand_positions(w, h, count, width):
+    width += 10
+    available_positions = [(i, j) for i in range(0, w // width) for j in range(0, h // width)]
+    positions = []
+    for i in range(0, count):
+        pos = available_positions[random.randrange(0, len(available_positions))]
+        available_positions.remove(pos)
+        positions.append((pos[0] * width + width / 2, pos[1] * width + width / 2))
+    return positions
+
+
+def deg_to_vector(rotation):
+    radians_rotation = math.radians(rotation)
+    return eu.Vector2(math.cos(radians_rotation), -math.sin(radians_rotation))
+
+
+def check_edge(p1, p2, segment_beg, segment_end, u1u2):
+    new_intersection = get_segments_intersection(segment_beg, segment_end, p1, p2)
+    if u1u2 is None or (new_intersection is not None and new_intersection[0] < u1u2[0]):
+        u1u2 = new_intersection
+    return u1u2
+
+
+def get_segment_rect_intersection(segment_beg, segment_end, square_center,
+                                  half_width, half_height):
+    # square points
+    p1 = (square_center[0] - half_width, square_center[1] - half_height)
+    p2 = (square_center[0] - half_width, square_center[1] + half_height)
+    p3 = (square_center[0] + half_width, square_center[1] + half_height)
+    p4 = (square_center[0] + half_width, square_center[1] - half_height)
+
+    u1u2 = None
+    u1u2 = check_edge(p1, p2, segment_beg, segment_end, u1u2)
+    u1u2 = check_edge(p2, p3, segment_beg, segment_end, u1u2)
+    u1u2 = check_edge(p3, p4, segment_beg, segment_end, u1u2)
+    u1u2 = check_edge(p4, p1, segment_beg, segment_end, u1u2)
+    return u1u2[0] if u1u2 is not None else None
+
+
+def get_segments_intersection(segment1_beg, segment1_end, segment2_beg, segment2_end):
+    divisor = (segment2_end[1] - segment2_beg[1]) * (segment1_end[0] - segment1_beg[0]) - \
+              (segment2_end[0] - segment2_beg[0]) * (segment1_end[1] - segment1_beg[1])
+    if divisor == 0:
+        # parallel segments
+        return None
+    u1 = (segment2_end[0] - segment2_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
+         (segment2_end[1] - segment2_beg[1]) * (segment1_beg[0] - segment2_beg[0])
+    u1 /= divisor
+    intersection_delta = consts["world"]["intersection_delta"]
+    if u1 >= 1 - intersection_delta or u1 <= intersection_delta:
+        # intersection is out of segment 1
+        return None
+    u2 = (segment1_end[0] - segment1_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
+         (segment1_end[1] - segment1_beg[1]) * (segment1_beg[0] - segment2_beg[0])
+    u2 /= divisor
+    if u2 >= 1 - intersection_delta or u2 <= intersection_delta:
+        # intersection is out of segment 2
+        return None
+    return u1, u2
+
+
+def check_if_square_is_out_of_window(point, half_width):
+    window_width = consts["window"]["width"]
+    window_height = consts["window"]["height"]
+    return (window_width - half_width <= point[0]) or (half_width >= point[0]) or \
+           (window_height - half_width <= point[1]) or (half_width >= point[1])
+
+
+def check_if_point_in_rect(point, square_center, half_width, half_height):
+    return (square_center[0] - half_width <= point[0]) and (square_center[0] + half_width >= point[0]) and \
+           (square_center[1] - half_height <= point[1]) and (square_center[1] + half_height >= point[1])
