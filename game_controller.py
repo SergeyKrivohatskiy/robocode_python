@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import operator
+
 __author__ = 'Sergey Krivohatskiy'
 import cocos
 import time
@@ -7,7 +9,7 @@ import random
 import math
 from robot import HitByBullet, Fire, TurnGun, TurnBody, TurnRadar, DoNothing, Move, ScannedRobot
 from bullet import Bullet
-from itertools import combinations
+from itertools import combinations, chain
 import constants
 
 
@@ -174,11 +176,17 @@ class GameController(cocos.layer.Layer):
         window_rect = (center, half_width, half_height)
         u1 = None
         if check_if_point_in_rect(segment[1], center, half_width, half_height) != check_if_point_in_rect(segment[0],
-                                                                                                          center,
-                                                                                                          half_width,
-                                                                                                          half_height):
+                                                                                                         center,
+                                                                                                         half_width,
+                                                                                                         half_height):
             u1 = get_segment_rect_intersection(segment, window_rect)
         return u1
+
+    def robot_intersect(self, robot_move_segment, second_robot):
+        robots_minkowski_rect = (
+            second_robot.position, 2 * constants.robot_half_width, 2 * constants.robot_half_width)
+        new_u1 = get_segment_rect_intersection(robot_move_segment, robots_minkowski_rect)
+        return new_u1
 
     def process_robots(self):
         # process commands
@@ -200,18 +208,13 @@ class GameController(cocos.layer.Layer):
             new_pos = robot.position + robot.velocity * deg_to_vector(robot.rotation)
             robot_move_segment = (old_pos, new_pos)
             # first intersect with borders
-            u1 = self.get_segment_border_intersection(robot_move_segment)
-
-            where_min = None
-            for second_robot in self.robots:
-                if second_robot == robot:
-                    continue
-                robots_minkowski_rect = (
-                    second_robot.position, 2 * constants.robot_half_width, 2 * constants.robot_half_width)
-                new_u1 = get_segment_rect_intersection(robot_move_segment, robots_minkowski_rect)
-                if u1 is None or (new_u1 is not None and new_u1 < u1):
-                    u1 = new_u1
-                    where_min = second_robot
+            border_intersect = (self.get_segment_border_intersection(robot_move_segment), None)
+            all_intersections = chain([border_intersect],
+                                      [(self.robot_intersect(robot_move_segment, second_robot), second_robot) for
+                                       second_robot in self.robots if second_robot != robot])
+            all_intersections = [x for x in all_intersections if x[0] is not None]
+            u1, where_min = min(all_intersections, key=operator.itemgetter(0)) if len(all_intersections) != 0 else (
+                None, None)
 
             if u1 is None:
                 robot.position = new_pos
