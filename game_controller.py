@@ -12,7 +12,7 @@ from bullet import *
 
 
 class GameController(cocos.layer.Layer):
-    tic_time = 0.2
+    tic_time = 0.04
 
     # robots_list is a list of Robot class subclasses
     def __init__(self, robots_list):
@@ -82,7 +82,7 @@ class GameController(cocos.layer.Layer):
                 if u1 is None:
                     continue
                 removed = True
-                # TODO event
+                self.robot_events[robot] = HitByBullet(robot, bullet)
                 robot.energy -= bullet.robot_damage
                 bullet.owner.energy += bullet.energy_and_points_boost
                 bullet.owner.points += bullet.energy_and_points_boost
@@ -241,8 +241,7 @@ class GameController(cocos.layer.Layer):
 
     def process_events(self):
         for robot in self.robot_events:
-            if robot.event is None:
-                pass#robot.event = self.robot_events[robot]
+            robot.set_event(self.robot_events[robot])
 
     @staticmethod
     def get_rotation_deg(command, max_turn, robot):

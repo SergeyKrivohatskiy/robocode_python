@@ -12,7 +12,7 @@ def load_robots():
     load Robot subclasses list from somewhere
     :return: Robot subclasses list
     """
-    return [example_robot.ExampleRobot] * 2
+    return [example_robot.ExampleRobot] * 4
 
 
 class NoRobotsException(BaseException):

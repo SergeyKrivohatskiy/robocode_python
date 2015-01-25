@@ -48,6 +48,14 @@ class ScannedRobot(object):
     pass
 
 
+class HitByBullet(object):
+    def __init__(self, robot, bullet):
+        self.bearing = (180 + bullet.rotation) - robot.rotation
+
+    def get_bearing(self):
+        return self.bearing
+
+
 class Robot(cocos.sprite.Sprite):
 
     def __init__(self, game_controller, position):
@@ -63,6 +71,8 @@ class Robot(cocos.sprite.Sprite):
         self.energy = self.robot_consts["initial_energy"]
         self.points = 0
         self.event = None
+        self.processing_event = False
+        self.removed_commands = []
 
         self.new_command_event = threading.Event()
         self.get_command_event = threading.Event()
@@ -98,11 +108,15 @@ class Robot(cocos.sprite.Sprite):
         self.new_command_event.set()
         self.get_command_event.wait()
         self.get_command_event.clear()
-
-    def process_event(self):
-        if isinstance(self.event, ScannedRobot):
-            self.on_scanned_robot()
-            return
+        if self.event is not None and not self.processing_event:
+            self.processing_event = True
+            self.process_event()
+            self.event = None
+            self.commands = self.removed_commands
+            self.removed_commands = []
+            if len(self.commands) != 0:
+                self.on_command()
+            self.processing_event = False
 
     def do_nothing(self):
         self.push_command(DoNothing())
@@ -148,6 +162,14 @@ class Robot(cocos.sprite.Sprite):
         self.push_command(Move(-distance))
         self.on_command()
 
+    def set_event(self, event):
+        if self.event is not None:
+            return
+        # remove all commands. So event will be processed next turn
+        self.removed_commands = self.commands
+        self.commands = []
+        self.event = event
+
     def fire(self, power):
         if self.gun.heat != 0:
             return
@@ -165,5 +187,16 @@ class Robot(cocos.sprite.Sprite):
     def get_radar_heading(self):
         return (self.get_gun_heading() + self.gun.radar.rotation) % 360
 
-    def on_scanned_robot(self):
-        self.fire(1)
+    def process_event(self):
+        if isinstance(self.event, ScannedRobot):
+            self.on_scanned_robot(self.event)
+            return
+        if isinstance(self.event, HitByBullet):
+            self.on_hit_by_bullet(self.event)
+            return
+
+    def on_scanned_robot(self, event):
+        pass
+
+    def on_hit_by_bullet(self, event):
+        pass

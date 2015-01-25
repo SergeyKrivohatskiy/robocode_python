@@ -3,8 +3,8 @@ __author__ = 'Sergey Krivohatskiy'
 
 consts = {
     "window": {
-        "width": 600,
-        "height": 400,
+        "width": 800,
+        "height": 600,
         "vsync": True,
         "resizable": True
     },
