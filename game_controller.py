@@ -139,18 +139,15 @@ class GameController(cocos.layer.Layer):
             return
 
     def process_move(self, command, robot):
+        # TODO acceleration
         s = command.distance
-        max_acc = consts["robot"]["max_acceleration"]
-        min_acc = consts["robot"]["min_acceleration"]
-        if 0 <= s <= max_acc:
-            robot.acceleration = s
-            return
-        if min_acc <= s < 0:
-            robot.acceleration = s
-            return
-
-        robot.acceleration = math.copysign(s, max_acc)
-        robot.acceleration = random.randrange(0, 2)
+        max_velocity = consts["robot"]["max_velocity"]
+        if abs(s) > max_velocity:
+            s = math.copysign(max_velocity, s)
+        command.distance -= s
+        if command.distance != 0:
+            robot.push_command(command)
+        robot.velocity = s
 
 
     def process_robots(self):
