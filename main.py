@@ -12,7 +12,7 @@ def load_robots():
     load Robot subclasses list from somewhere
     :return: Robot subclasses list
     """
-    return [example_robot.ExampleRobot] * 5
+    return [example_robot.ExampleRobot] * 2
 
 
 class NoRobotsException(BaseException):
@@ -34,10 +34,10 @@ def main():
         cocos.director.director.run(scene)
     except NoRobotsException as e:
         print('There is no robots in robots_list')
-        return -1
+        return -2
     except BaseException as e:
         print('Unexpected exception: ' + str(e))
-        return -2
+        return -3
 
 
 if __name__ == '__main__':

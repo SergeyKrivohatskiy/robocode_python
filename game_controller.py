@@ -10,8 +10,9 @@ import random
 from robot import *
 from bullet import *
 
+
 class GameController(cocos.layer.Layer):
-    tic_time = 0.02
+    tic_time = 0.2
 
     # robots_list is a list of Robot class subclasses
     def __init__(self, robots_list):
@@ -24,6 +25,7 @@ class GameController(cocos.layer.Layer):
         for robot in self.robots:
             self.add(robot, z=1)
         self.time = 0
+        self.robot_events = {}
         self.do(cocos.actions.Repeat(self.update))
 
     @cocos.actions.CallFuncS
@@ -36,6 +38,7 @@ class GameController(cocos.layer.Layer):
         self.process_robots()
         self.make_scan()
         self.process_events()
+        self.robot_events = {}
 
         to_sleep = GameController.tic_time + start - time.time()
         time.sleep(to_sleep if to_sleep > 0 else 0)
@@ -163,13 +166,10 @@ class GameController(cocos.layer.Layer):
                 continue
             if isinstance(command, Move):
                 self.process_move(command, robot)
-            else:
-                robot.acceleration = -robot.velocity
 
 
         # move robots
         for robot in self.robots:
-            robot.velocity += robot.acceleration
             if abs(robot.velocity) > consts["robot"]["max_velocity"]:
                 robot.velocity = math.copysign(consts["robot"]["max_velocity"], robot.velocity)
             if robot.velocity == 0:
@@ -203,6 +203,7 @@ class GameController(cocos.layer.Layer):
 
             if u1 is None:
                 robot.position = new_pos
+                robot.acceleration = robot.velocity = 0
                 continue
 
             # u1 is a time of the first intersection (from 0 to 1)
@@ -221,12 +222,27 @@ class GameController(cocos.layer.Layer):
                 # TODO events
             robot.acceleration = robot.velocity = 0
 
-
     def make_scan(self):
-        pass
+        for robot in self.robots:
+            radar_rotation = robot.get_radar_heading()
+            radar_line_beg = robot.position
+            radar_line_end = radar_line_beg + 1200 * deg_to_vector(radar_rotation)
+            u1 = None
+            for second_robot in self.robots:
+                if second_robot == robot:
+                    continue
+                new_u1 = get_segment_rect_intersection(radar_line_beg, radar_line_end, second_robot.position,
+                                                       consts["robot"]["half_width"], consts["robot"]["half_width"])
+                if u1 is None or (new_u1 is not None and new_u1 < u1):
+                    u1 = new_u1
+                    where_min = second_robot
+            if u1 is not None:
+                self.robot_events[robot] = ScannedRobot()
 
     def process_events(self):
-        pass
+        for robot in self.robot_events:
+            if robot.event is None:
+                pass#robot.event = self.robot_events[robot]
 
     @staticmethod
     def get_rotation_deg(command, max_turn, robot):
@@ -237,9 +253,6 @@ class GameController(cocos.layer.Layer):
         if command.deg != 0:
             robot.push_command(command)
         return deg
-
-
-
 
 
 def get_rand_positions(w, h, count, width):

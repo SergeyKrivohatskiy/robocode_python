@@ -44,6 +44,10 @@ class Move(object):
         return 'Move %d distance' % self.distance
 
 
+class ScannedRobot(object):
+    pass
+
+
 class Robot(cocos.sprite.Sprite):
 
     def __init__(self, game_controller, position):
@@ -58,6 +62,7 @@ class Robot(cocos.sprite.Sprite):
         self.rotation = 0
         self.energy = self.robot_consts["initial_energy"]
         self.points = 0
+        self.event = None
 
         self.new_command_event = threading.Event()
         self.get_command_event = threading.Event()
@@ -93,6 +98,11 @@ class Robot(cocos.sprite.Sprite):
         self.new_command_event.set()
         self.get_command_event.wait()
         self.get_command_event.clear()
+
+    def process_event(self):
+        if isinstance(self.event, ScannedRobot):
+            self.on_scanned_robot()
+            return
 
     def do_nothing(self):
         self.push_command(DoNothing())
@@ -154,3 +164,6 @@ class Robot(cocos.sprite.Sprite):
 
     def get_radar_heading(self):
         return (self.get_gun_heading() + self.gun.radar.rotation) % 360
+
+    def on_scanned_robot(self):
+        self.fire(1)
