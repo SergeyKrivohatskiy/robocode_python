@@ -11,7 +11,7 @@ from robot import *
 from bullet import *
 
 class GameController(cocos.layer.Layer):
-    tic_time = 0
+    tic_time = 0.02
 
     # robots_list is a list of Robot class subclasses
     def __init__(self, robots_list):
@@ -182,6 +182,7 @@ class GameController(cocos.layer.Layer):
             # first intersect with borders
             half_window_width = consts["window"]["width"] / 2
             half_window_height = consts["window"]["height"] / 2
+            # Minkowski addition
             half_width = half_window_width - consts["robot"]["half_width"]
             half_height = half_window_height - consts["robot"]["half_width"]
             center = (half_window_width, half_window_height)
@@ -208,18 +209,20 @@ class GameController(cocos.layer.Layer):
                 continue
 
             # u1 is a time of the first intersection (from 0 to 1)
-            # TODO prevent predicament
             u1 = u1 * 9 / 10
             dx = u1 * (new_pos[0] - old_pos[0])
             dy = u1 * (new_pos[1] - old_pos[1])
             new_pos[0] = old_pos[0] + (dx if dx > 1 else 0)
             new_pos[1] = old_pos[1] + (dy if dy > 1 else 0)
             robot.position = new_pos
-            robot.acceleration = robot.velocity = 0
             if where_min is None:
-                pass  # TODO process border collision
+                robot.energy -= min(0, abs(robot.velocity) * 0.5 - 1)
+                # TODO event
             else:
-                pass  # TODO process robot collision
+                robot.energy -= 0.6
+                where_min.energy -= 0.6
+                # TODO events
+            robot.acceleration = robot.velocity = 0
 
 
     def make_scan(self):

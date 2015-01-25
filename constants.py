@@ -3,8 +3,8 @@ __author__ = 'Sergey Krivohatskiy'
 
 consts = {
     "window": {
-        "width": 1200,
-        "height": 600,
+        "width": 600,
+        "height": 400,
         "vsync": True,
         "resizable": True
     },
@@ -17,8 +17,6 @@ consts = {
         "intersection_delta": 0
     },
     "robot": {
-        "width": 50,
-        "height": 50,
         "resources": {
             "body": 'robot.png',
             "gun": 'gun.png',
