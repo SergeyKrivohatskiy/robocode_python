@@ -6,6 +6,7 @@ import cocos
 from gun import Gun
 import constants
 import math
+from utils import deg_to_vector
 
 
 class DoNothing(object):
@@ -187,6 +188,17 @@ class Robot(cocos.sprite.Sprite):
         if isinstance(self.event, HitByBullet):
             self.on_hit_by_bullet(self.event)
             return
+
+    def get_radar_segment(self):
+        radar_rotation = self.get_radar_heading()
+        radar_line_beg = self.position
+        radar_line_end = radar_line_beg + constants.robot_radar_scan_length * deg_to_vector(radar_rotation)
+        return radar_line_end, radar_line_beg
+
+    def get_move_segment(self):
+        old_pos = self.position
+        new_pos = self.position + self.velocity * deg_to_vector(self.rotation)
+        return old_pos, new_pos
 
     def on_scanned_robot(self, event):
         pass
