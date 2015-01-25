@@ -2,7 +2,7 @@
 __author__ = 'Sergey Krivohatskiy'
 import game_controller
 from constants import consts
-import example_robot
+import example_robots
 from robot import Robot
 import cocos
 
@@ -12,7 +12,7 @@ def load_robots():
     load Robot subclasses list from somewhere
     :return: Robot subclasses list
     """
-    return [example_robot.ExampleRobot] * 4
+    return [example_robots.MyFirstRobot, example_robots.Fire] * 2
 
 
 class NoRobotsException(BaseException):

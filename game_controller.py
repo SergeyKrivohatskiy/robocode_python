@@ -22,8 +22,12 @@ class GameController(cocos.layer.Layer):
         positions = get_rand_positions(self.w, self.h, len(robots_list), 2 * consts["robot"]["half_width"])
         self.robots = [robots_list[i](self, positions[i]) for i in range(0, len(robots_list))]
         self.bullets = []
+        self.status_labels = {}
         for robot in self.robots:
             self.add(robot, z=1)
+            self.status_labels[robot] = cocos.text.Label("",
+                                                         (robot.position[0], robot.position[1] - 60))
+            self.add(self.status_labels[robot], z=3)
         self.time = 0
         self.robot_events = {}
         self.do(cocos.actions.Repeat(self.update))
@@ -39,6 +43,10 @@ class GameController(cocos.layer.Layer):
         self.make_scan()
         self.process_events()
         self.robot_events = {}
+        for robot in self.robots:
+            label = self.status_labels[robot]
+            label.position = (robot.position[0], robot.position[1] - 60)
+            label.element.document.text = "Energy %.0f, Score %.0f" % (robot.energy, robot.points)
 
         to_sleep = GameController.tic_time + start - time.time()
         time.sleep(to_sleep if to_sleep > 0 else 0)
@@ -156,6 +164,7 @@ class GameController(cocos.layer.Layer):
     def process_robots(self):
         # process commands
         for robot in self.robots:
+            robot.acceleration = robot.velocity = 0
             if not robot.has_command():
                 continue
             command = robot.pop_command()
@@ -203,7 +212,6 @@ class GameController(cocos.layer.Layer):
 
             if u1 is None:
                 robot.position = new_pos
-                robot.acceleration = robot.velocity = 0
                 continue
 
             # u1 is a time of the first intersection (from 0 to 1)
@@ -220,7 +228,6 @@ class GameController(cocos.layer.Layer):
                 robot.energy -= 0.6
                 where_min.energy -= 0.6
                 # TODO events
-            robot.acceleration = robot.velocity = 0
 
     def make_scan(self):
         for robot in self.robots:
@@ -237,7 +244,7 @@ class GameController(cocos.layer.Layer):
                     u1 = new_u1
                     where_min = second_robot
             if u1 is not None:
-                self.robot_events[robot] = ScannedRobot()
+                self.robot_events[robot] = ScannedRobot(robot, second_robot)
 
     def process_events(self):
         for robot in self.robot_events:

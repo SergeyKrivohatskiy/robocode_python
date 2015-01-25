@@ -9,9 +9,9 @@ consts = {
         "resizable": True
     },
     "background_color" : {
-        "r": 255,
-        "g": 255,
-        "b": 255
+        "r": 23,
+        "g": 32,
+        "b": 23
     },
     "world": {
         "intersection_delta": 0

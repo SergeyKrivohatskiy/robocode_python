@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import math
+
 __author__ = 'Sergey Krivohatskiy'
 import threading
 import pyglet
@@ -45,12 +47,14 @@ class Move(object):
 
 
 class ScannedRobot(object):
-    pass
+    def __init__(self, robot1, robot2):
+        diff = (robot1.position[0] - robot2.position[0], robot1.position[1] - robot2.position[1])
+        self.distance = math.sqrt(diff[0] * diff[0] + diff[1] * diff[1])
 
 
 class HitByBullet(object):
     def __init__(self, robot, bullet):
-        self.bearing = (180 + bullet.rotation) - robot.rotation
+        self.bearing = ((180 + bullet.rotation) - robot.rotation) % 360 - 180
 
     def get_bearing(self):
         return self.bearing
