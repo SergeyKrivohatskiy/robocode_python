@@ -129,7 +129,10 @@ class GameController(cocos.layer.Layer):
                 u1 = get_segment_square_intersection(old_pos, new_pos, robot.position, consts["robot"]["half_width"])
                 if u1 is not None:
                     self.remove_bullet(bullet)
-                    # TODO event and energy change
+                    # TODO event
+                    robot.energy -= bullet.robot_damage
+                    bullet.owner.energy += bullet.energy_and_points_boost
+                    bullet.owner.points += bullet.energy_and_points_boost
                 else:
                     new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
         return bullet_old_pos_new_pos

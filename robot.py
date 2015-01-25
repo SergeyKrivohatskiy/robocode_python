@@ -57,6 +57,7 @@ class Robot(cocos.sprite.Sprite):
         self.add(self.gun)
         self.rotation = 0
         self.energy = self.robot_consts["initial_energy"]
+        self.points = 0
 
         self.new_command_event = threading.Event()
         self.get_command_event = threading.Event()
@@ -142,6 +143,7 @@ class Robot(cocos.sprite.Sprite):
     def fire(self, power):
         if self.gun.heat != 0:
             return
+        self.energy -= power
         self.gun.heat += (1 + power / 5)
         self.push_command(Fire(power))
         self.on_command()
