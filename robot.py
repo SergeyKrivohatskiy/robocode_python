@@ -75,12 +75,10 @@ class Robot(cocos.sprite.Sprite):
 
     def prepare_command(self):
         if len(self.commands) != 0:
-            print(self.commands)
             return
         self.get_command_event.set()
         self.new_command_event.wait()
         self.new_command_event.clear()
-        print(self.commands)
 
     def has_command(self):
         return len(self.commands) != 0

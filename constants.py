@@ -14,6 +14,7 @@ consts = {
         "b": 255
     },
     "world": {
+        "intersection_delta": 0
     },
     "robot": {
         "width": 50,

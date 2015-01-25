@@ -27,13 +27,13 @@ def check_edge(p1, p2, segment_beg, segment_end, u1u2):
     return u1u2
 
 
-def get_segment_square_intersection(segment_beg, segment_end, square_center,
-                                    half_width):
+def get_segment_rect_intersection(segment_beg, segment_end, square_center,
+                                  half_width, half_height):
     # square points
-    p1 = (square_center[0] - half_width, square_center[1] - half_width)
-    p2 = (square_center[0] - half_width, square_center[1] + half_width)
-    p3 = (square_center[0] + half_width, square_center[1] + half_width)
-    p4 = (square_center[0] + half_width, square_center[1] - half_width)
+    p1 = (square_center[0] - half_width, square_center[1] - half_height)
+    p2 = (square_center[0] - half_width, square_center[1] + half_height)
+    p3 = (square_center[0] + half_width, square_center[1] + half_height)
+    p4 = (square_center[0] + half_width, square_center[1] - half_height)
 
     u1u2 = None
     u1u2 = check_edge(p1, p2, segment_beg, segment_end, u1u2)
@@ -52,13 +52,14 @@ def get_segments_intersection(segment1_beg, segment1_end, segment2_beg, segment2
     u1 = (segment2_end[0] - segment2_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
          (segment2_end[1] - segment2_beg[1]) * (segment1_beg[0] - segment2_beg[0])
     u1 /= divisor
-    if u1 > 1 or u1 < 0:
+    intersection_delta = consts["world"]["intersection_delta"]
+    if u1 > 1 - intersection_delta or u1 <= intersection_delta:
         # intersection is out of segment 1
         return None
     u2 = (segment1_end[0] - segment1_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
          (segment1_end[1] - segment1_beg[1]) * (segment1_beg[0] - segment2_beg[0])
     u2 /= divisor
-    if u2 > 1 or u2 < 0:
+    if u2 > 1 - intersection_delta or u2 <= intersection_delta:
         # intersection is out of segment 2
         return None
     return u1, u2
@@ -89,7 +90,6 @@ class GameController(cocos.layer.Layer):
         self.make_scan()
         self.process_events()
 
-        print(self.time)
         to_sleep = GameController.tic_time + start - time.time()
         time.sleep(to_sleep if to_sleep > 0 else 0)
 
@@ -110,7 +110,7 @@ class GameController(cocos.layer.Layer):
         new_bullet_old_pos_new_pos = []
         for i in range(0, len(bullet_old_pos_new_pos)):
             if removed[i]:
-                    self.remove_bullet(bullet_old_pos_new_pos[i][0])
+                self.remove_bullet(bullet_old_pos_new_pos[i][0])
             else:
                 new_bullet_old_pos_new_pos.append(bullet_old_pos_new_pos[i])
         return new_bullet_old_pos_new_pos
@@ -126,7 +126,8 @@ class GameController(cocos.layer.Layer):
                 if bullet.owner == robot:
                     # cant do suicide
                     continue
-                u1 = get_segment_square_intersection(old_pos, new_pos, robot.position, consts["robot"]["half_width"])
+                u1 = get_segment_rect_intersection(old_pos, new_pos, robot.position, consts["robot"]["half_width"],
+                                                   consts["robot"]["half_width"])
                 if u1 is not None:
                     self.remove_bullet(bullet)
                     # TODO event
@@ -185,7 +186,13 @@ class GameController(cocos.layer.Layer):
             robot.gun.radar.rotation = (deg + robot.gun.radar.rotation) % 360
             return
 
+    def process_move(self, command, robot):
+        max_vel = consts["robot"]["max_velocity"]
+        # TODO
+        robot.acceleration = random.randrange(-2, 2)
+
     def process_robots(self):
+        # process commands
         for robot in self.robots:
             if not robot.has_command():
                 continue
@@ -196,17 +203,52 @@ class GameController(cocos.layer.Layer):
                 self.process_turn_command(command, robot)
                 continue
             if isinstance(command, Move):
-                max_vel = consts["robot"]["max_velocity"]
-                distance = command.distance
-                if abs(distance) > max_vel:
-                    distance = math.copysign(max_vel, distance)
-                command.distance -= distance
-                if command.distance != 0:
-                    robot.push_command(command)
-                robot.position += distance * deg_to_vector(robot.rotation)
+                self.process_move(command, robot)
                 continue
             # push command back if do not know how to process it
             robot.push_command(command)
+
+        # move robots
+        for robot in self.robots:
+            robot.velocity += robot.acceleration
+            if abs(robot.velocity) > consts["robot"]["max_velocity"]:
+                robot.velocity = math.copysign(consts["robot"]["max_velocity"], robot.velocity)
+            if robot.velocity == 0:
+                continue
+            old_pos = robot.position
+            new_pos = robot.position + robot.velocity * deg_to_vector(robot.rotation)
+            # first intersect with borders
+            half_window_width = consts["window"]["width"] / 2
+            half_window_height = consts["window"]["height"] / 2
+            minkowski_addition_half_width = half_window_width - consts["robot"]["half_width"]
+            minkowski_addition_half_height = half_window_height - consts["robot"]["half_width"]
+            u1 = get_segment_rect_intersection(old_pos, new_pos, (half_window_width, half_window_height),
+                                               minkowski_addition_half_width, minkowski_addition_half_height)
+            where_min = None
+            for second_robot in self.robots:
+                if second_robot == robot:
+                    continue
+                new_u1 = get_segment_rect_intersection(old_pos, new_pos, second_robot.position,
+                                                       2 * consts["robot"]["half_width"],
+                                                       2 * consts["robot"]["half_width"])
+                if u1 is None or (new_u1 is not None and new_u1 < u1):
+                    u1 = new_u1
+                    where_min = second_robot
+
+            if u1 is None:
+                robot.position = new_pos
+                continue
+
+            # u1 is a time of the first intersection (from 0 to 1)
+            # TODO prevent predicament
+            new_pos = robot.position + robot.velocity * u1 * deg_to_vector(robot.rotation)
+            robot.position = new_pos
+            robot.acceleration = robot.velocity = 0
+            if where_min is None:
+                pass # TODO process border collision
+            else:
+                pass # TODO process robot collision
+
 
     def make_scan(self):
         pass
