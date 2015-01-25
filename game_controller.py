@@ -53,16 +53,28 @@ def get_segments_intersection(segment1_beg, segment1_end, segment2_beg, segment2
          (segment2_end[1] - segment2_beg[1]) * (segment1_beg[0] - segment2_beg[0])
     u1 /= divisor
     intersection_delta = consts["world"]["intersection_delta"]
-    if u1 > 1 - intersection_delta or u1 <= intersection_delta:
+    if u1 >= 1 - intersection_delta or u1 <= intersection_delta:
         # intersection is out of segment 1
         return None
     u2 = (segment1_end[0] - segment1_beg[0]) * (segment1_beg[1] - segment2_beg[1]) - \
          (segment1_end[1] - segment1_beg[1]) * (segment1_beg[0] - segment2_beg[0])
     u2 /= divisor
-    if u2 > 1 - intersection_delta or u2 <= intersection_delta:
+    if u2 >= 1 - intersection_delta or u2 <= intersection_delta:
         # intersection is out of segment 2
         return None
     return u1, u2
+
+
+def check_if_square_is_out_of_window(point, half_width):
+    window_width = consts["window"]["width"]
+    window_height = consts["window"]["height"]
+    return (window_width - half_width <= point[0]) or (half_width >= point[0]) or \
+           (window_height - half_width <= point[1]) or (half_width >= point[1])
+
+
+def check_if_point_in_rect(point, square_center, half_width, half_height):
+    return (square_center[0] - half_width <= point[0]) and (square_center[0] + half_width >= point[0]) and \
+           (square_center[1] - half_height <= point[1]) and (square_center[1] + half_height >= point[1])
 
 
 class GameController(cocos.layer.Layer):
@@ -136,12 +148,12 @@ class GameController(cocos.layer.Layer):
                     bullet.owner.points += bullet.energy_and_points_boost
                 else:
                     new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
-        return bullet_old_pos_new_pos
+        return new_bullet_old_pos_new_pos
 
     def check_bullets_out_of_window(self, bullet_old_pos_new_pos):
         new_bullet_old_pos_new_pos = []
         for bullet, old_pos, new_pos in bullet_old_pos_new_pos:
-            if self.check_if_square_is_out_of_window(new_pos, 0):
+            if check_if_square_is_out_of_window(new_pos, 0):
                 self.remove_bullet(bullet)
             else:
                 new_bullet_old_pos_new_pos.append((bullet, old_pos, new_pos))
@@ -187,9 +199,19 @@ class GameController(cocos.layer.Layer):
             return
 
     def process_move(self, command, robot):
-        max_vel = consts["robot"]["max_velocity"]
-        # TODO
-        robot.acceleration = random.randrange(-2, 2)
+        s = command.distance
+        max_acc = consts["robot"]["max_acceleration"]
+        min_acc = consts["robot"]["min_acceleration"]
+        if 0 <= s <= max_acc:
+            robot.acceleration = s
+            return
+        if min_acc <= s < 0:
+            robot.acceleration = s
+            return
+
+        robot.acceleration = math.copysign(s, max_acc)
+        robot.acceleration = random.randrange(0, 2)
+
 
     def process_robots(self):
         # process commands
@@ -204,9 +226,9 @@ class GameController(cocos.layer.Layer):
                 continue
             if isinstance(command, Move):
                 self.process_move(command, robot)
-                continue
-            # push command back if do not know how to process it
-            robot.push_command(command)
+            else:
+                robot.acceleration = -robot.velocity
+
 
         # move robots
         for robot in self.robots:
@@ -220,10 +242,16 @@ class GameController(cocos.layer.Layer):
             # first intersect with borders
             half_window_width = consts["window"]["width"] / 2
             half_window_height = consts["window"]["height"] / 2
-            minkowski_addition_half_width = half_window_width - consts["robot"]["half_width"]
-            minkowski_addition_half_height = half_window_height - consts["robot"]["half_width"]
-            u1 = get_segment_rect_intersection(old_pos, new_pos, (half_window_width, half_window_height),
-                                               minkowski_addition_half_width, minkowski_addition_half_height)
+            half_width = half_window_width - consts["robot"]["half_width"]
+            half_height = half_window_height - consts["robot"]["half_width"]
+            center = (half_window_width, half_window_height)
+            u1 = None
+            if check_if_point_in_rect(old_pos, center, half_width, half_height) != check_if_point_in_rect(new_pos,
+                                                                                                          center,
+                                                                                                          half_width,
+                                                                                                          half_height):
+                u1 = get_segment_rect_intersection(old_pos, new_pos, center,
+                                                   half_width, half_height)
             where_min = None
             for second_robot in self.robots:
                 if second_robot == robot:
@@ -241,13 +269,17 @@ class GameController(cocos.layer.Layer):
 
             # u1 is a time of the first intersection (from 0 to 1)
             # TODO prevent predicament
-            new_pos = robot.position + robot.velocity * u1 * deg_to_vector(robot.rotation)
+            u1 = u1 * 9 / 10
+            dx = u1 * (new_pos[0] - old_pos[0])
+            dy = u1 * (new_pos[1] - old_pos[1])
+            new_pos[0] = old_pos[0] + (dx if dx > 1 else 0)
+            new_pos[1] = old_pos[1] + (dy if dy > 1 else 0)
             robot.position = new_pos
             robot.acceleration = robot.velocity = 0
             if where_min is None:
-                pass # TODO process border collision
+                pass  # TODO process border collision
             else:
-                pass # TODO process robot collision
+                pass  # TODO process robot collision
 
 
     def make_scan(self):
@@ -265,10 +297,3 @@ class GameController(cocos.layer.Layer):
         if command.deg != 0:
             robot.push_command(command)
         return deg
-
-    @staticmethod
-    def check_if_square_is_out_of_window(point, half_width):
-        window_width = consts["window"]["width"]
-        window_height = consts["window"]["height"]
-        return (window_width - half_width <= point[0]) or (half_width >= point[0]) or \
-               (window_height - half_width <= point[1]) or (half_width >= point[1])

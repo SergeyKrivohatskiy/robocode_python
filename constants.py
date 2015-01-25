@@ -30,6 +30,8 @@ consts = {
         "max_idle_body_turn": 10,
         "velocity_body_turn_coefficient": 0.75,
         "max_velocity": 8,
+        "max_acceleration": 2,
+        "min_acceleration": -2,
         "initial_energy": 100,
         "half_width": 50,
         "gun_cooling": 0.1
